@@ -15,11 +15,8 @@ export default function MemorialLayout({
 
   const navigationTabs = [
     { name: "Story", path: "/" },
-    // { name: 'Timeline', path: '/timeline' },
     { name: "Gallery", path: "/photos" },
-    // { name: 'Videos', path: '/videos' },
     { name: "Tributes", path: "/tributes" },
-    // { name: "Forum", path: "/forum" },
   ];
 
   return (
@@ -30,7 +27,7 @@ export default function MemorialLayout({
       )}
 
       {/* Profile Header Content Element */}
-      <div className={`relative z-10 w-full px-6 ${isPhotosPage ? "pt-10" : "pt-16"}`}>
+      <div className={`relative z-10 w-full px-4 sm:px-6 ${isPhotosPage ? "pt-10" : "pt-16"}`}>
         <div className="text-center max-w-3xl mx-auto flex flex-col items-center pb-12">
           
           {/* PROFILE CARD META - Hidden completely when on the Gallery page */}
@@ -40,10 +37,10 @@ export default function MemorialLayout({
               <div className="relative w-36 h-36 mb-6 rounded-full p-1 bg-white shadow-xl ring-2 ring-[#D4AF37]/40 mt-8">
                 <div className="relative w-full h-full rounded-full overflow-hidden">
                   <Image
-                    src="/Photo1.jpg" /* Fixed: Removed public prefix to prevent 404 logs */
+                    src="/Photo1.jpg"
                     alt="Ogbueshi Bennett Amaechi Oguegbu"
                     fill
-                    className="object-cover w-5 h-3"
+                    className="object-cover"
                     priority
                   />
                 </div>
@@ -80,34 +77,36 @@ export default function MemorialLayout({
 
           {!isPhotosPage && (
             <>
-              {/* Sub-routing Navigation Row — Synced completely to the new color language */}
-              <div className="flex items-center justify-center gap-2.5 w-full max-w-2xl mx-auto overflow-x-auto whitespace-nowrap py-2 no-scrollbar">
-                {navigationTabs.map((tab) => {
-                  const isSelectedRoute =
-                    pathname === tab.path ||
-                    pathname.startsWith(`${tab.path}/`);
+              {/* Responsive Sub-routing Navigation Track */}
+              <div className="w-full max-w-md mx-auto px-2">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 w-full bg-stone-100/40 p-1 rounded-full border border-stone-200/30">
+                  {navigationTabs.map((tab) => {
+                    const isSelectedRoute =
+                      pathname === tab.path ||
+                      (tab.path !== "/" && pathname.startsWith(tab.path));
 
-                  return (
-                    <Link
-                      key={tab.name}
-                      href={tab.path}
-                      className={`text-xs tracking-widest uppercase px-6 py-2.5 rounded-full transition-all duration-200 font-medium ${
-                        isSelectedRoute
-                          ? "bg-[#7A1C1C] text-white shadow-md font-semibold ring-1 ring-red-900/10" // Selected tab matches primary rich burgundy
-                          : "text-stone-600 bg-white/60 border border-stone-200/60 hover:bg-[#D4AF37] hover:text-white hover:border-[#D4AF37] shadow-sm" // Hover matches polished gold
-                      }`}
-                    >
-                      {tab.name}
-                    </Link>
-                  );
-                })}
+                    return (
+                      <Link
+                        key={tab.name}
+                        href={tab.path}
+                        className={`text-[10px] sm:text-xs tracking-wider sm:tracking-widest uppercase py-2.5 rounded-full transition-all duration-200 font-semibold text-center block ${
+                          isSelectedRoute
+                            ? "bg-[#7A1C1C] text-white shadow-md ring-1 ring-red-900/10"
+                            : "text-stone-600 bg-white/80 border border-stone-200/40 hover:bg-[#D4AF37] hover:text-white hover:border-[#D4AF37] shadow-sm"
+                        }`}
+                      >
+                        {tab.name}
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}
         </div>
         
-        {/* This children parameter injects sub-views (/story, /photos, /timeline) directly beneath the curve */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 transition-all duration-300">
+        {/* Sub-views Area */}
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 pb-12 transition-all duration-300">
           {children}
         </div>
       </div>
