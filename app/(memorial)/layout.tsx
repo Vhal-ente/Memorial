@@ -2,13 +2,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { AudioProvider, useAudio } from "@/context/AudioContext";
+import { Volume2, VolumeX } from "lucide-react";
 
-export default function MemorialLayout({
+/* -------------------------------------------------------------------------- */
+/*            INNER LAYOUT CONTENT FRAMEWORK (CONSUMES CONTEXT)               */
+/* -------------------------------------------------------------------------- */
+function MemorialLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { isPlaying, togglePlayback } = useAudio();
   
   // Detect if the user is currently looking at the Gallery view
   const isPhotosPage = pathname === "/photos";
@@ -21,6 +27,31 @@ export default function MemorialLayout({
 
   return (
     <div className="w-full relative min-h-screen bg-[#FCFBF8]">
+      {/* GLOBAL BACKGROUND SOUND CONTROLLER PANEL WIDGET */}
+      <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 md:bottom-8 md:left-8 z-40">
+        <button
+          onClick={togglePlayback}
+          className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-full shadow-2xl transition-all duration-300 border backdrop-blur-md font-sans text-xs tracking-wider font-medium uppercase
+            ${
+              isPlaying
+                ? "bg-[#7A1C1C] text-white border-amber-600/30"
+                : "bg-white text-stone-700 border-stone-200/80 hover:bg-stone-50"
+            }`}
+        >
+          {isPlaying ? (
+            <>
+              <Volume2 size={16} className="animate-pulse text-[#010101]" />
+              <span>Music On</span>
+            </>
+          ) : (
+            <>
+              <VolumeX size={16} className="text-stone-400" />
+              <span>Music Muted</span>
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Curved Background Aura Layer — Custom tailored to warm background champagne/gold curves */}
       {!isPhotosPage && (
         <div className="absolute top-0 left-0 w-full h-[620px] bg-gradient-to-b from-[#F9F3E3] via-[#FAF6EC] to-[#FCFBF8] pointer-events-none z-0 [clip-path:ellipse(100%_100%_at_50%_0%)] opacity-80" />
@@ -111,5 +142,20 @@ export default function MemorialLayout({
         </div>
       </div>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*            MAIN COMPONENT EXPORT (PROVIDES CONTEXT INITIALIZATION)         */
+/* -------------------------------------------------------------------------- */
+export default function MemorialLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AudioProvider>
+      <MemorialLayoutContent>{children}</MemorialLayoutContent>
+    </AudioProvider>
   );
 }

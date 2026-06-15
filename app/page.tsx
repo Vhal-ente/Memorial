@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import MemorialLayout from "./(memorial)/layout";
 import { TributeModal, TributeFormData } from "@/components/TributeModal";
-import Image from "next/image";
+// import Image from "next/image";
 import { Wrapper } from "@googlemaps/react-wrapper";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -20,14 +20,11 @@ import {
   ListOrdered,
   List,
   Quote,
-  Volume2,
-  VolumeX,
   Plus,
   X,
   Calendar,
   MapPin,
   Sparkles,
-  Heart,
 } from "lucide-react";
 
 declare global {
@@ -231,8 +228,8 @@ export default function HomePage() {
   // const [relationship, setRelationship] = useState("Friend");
   // const [message, setMessage] = useState("");
 
-  // Audio playback tracking state controls
-  const [isPlaying, setIsPlaying] = useState(false);
+
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const mapCenter = { lat: 43.6532, lng: -79.3832 };
@@ -242,64 +239,6 @@ export default function HomePage() {
     { label: "Tributes", icon: "💬", path: "/tributes" },
   ];
 
-  // Initialize and handle programmatic autoplay workarounds for browsers
-  useEffect(() => {
-    // URL encode the spaces so the browser can locate the file path correctly
-    const audioPath =
-      "/audio/" +
-      encodeURIComponent("This World Is Not My Home - Jim Reeves.mp3");
-    const audio = new Audio(audioPath);
-    audio.loop = true;
-    audioRef.current = audio;
-
-    const attemptAutoplay = () => {
-      audio
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          removeInteractionListeners();
-        })
-        .catch((err) => {
-          console.log(
-            "Autoplay blocked by browser policy. Waiting for user interaction to engage soundtrack.",
-            err,
-          );
-        });
-    };
-
-    const removeInteractionListeners = () => {
-      window.removeEventListener("click", attemptAutoplay);
-      window.removeEventListener("touchstart", attemptAutoplay);
-      window.removeEventListener("keydown", attemptAutoplay);
-    };
-
-    // Attempt immediate start
-    attemptAutoplay();
-
-    // Fallback interaction triggers if directly blocked by client browser policy
-    window.addEventListener("click", attemptAutoplay);
-    window.addEventListener("touchstart", attemptAutoplay);
-    window.addEventListener("keydown", attemptAutoplay);
-
-    return () => {
-      audio.pause();
-      removeInteractionListeners();
-    };
-  }, []);
-
-  const togglePlayback = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current
-        .play()
-        .catch((err) => console.log("Playback error:", err));
-      setIsPlaying(true);
-    }
-  };
-
   const handleTributeSubmit = (data: TributeFormData) => {
     console.log("Submitting Tribute Data Bundle:", data);
     setIsModalOpen(false);
@@ -307,30 +246,7 @@ export default function HomePage() {
 
   return (
     <MemorialLayout>
-      {/* BACKGROUND SOUND CONTROLLER PANEL WIDGET */}
-      <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 md:bottom-8 md:left-8 z-40">
-        <button
-          onClick={togglePlayback}
-          className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-full shadow-2xl transition-all duration-300 border backdrop-blur-md font-sans text-xs tracking-wider font-medium uppercase
-            ${
-              isPlaying
-                ? "bg-[#7A1C1C] text-white border-amber-600/30"
-                : "bg-white text-stone-700 border-stone-200/80 hover:bg-stone-50"
-            }`}
-        >
-          {isPlaying ? (
-            <>
-              <Volume2 size={16} className="animate-pulse text-[#010101]" />
-              <span>Music On</span>
-            </>
-          ) : (
-            <>
-              <VolumeX size={16} className="text-stone-400" />
-              <span>Music Muted</span>
-            </>
-          )}
-        </button>
-      </div>
+     
       <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 pb-24 pt-3 md:pb-28 text-left relative">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-10 xl:gap-12 items-start">
           {/* LEFT COLUMN: Biography Content panel */}
