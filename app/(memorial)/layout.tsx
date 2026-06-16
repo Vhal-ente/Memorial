@@ -68,7 +68,7 @@ export default function MemorialLayout({
               <div className="relative w-36 h-36 mb-6 rounded-full p-1 bg-white shadow-xl ring-2 ring-[#D4AF37]/40 mt-8">
                 <div className="relative w-full h-full rounded-full overflow-hidden">
                   <Image
-                    src="/photo1.jpg"
+                    src="/bennett.jpg"
                     alt="Ogbueshi Bennett Amaechi Oguegbu"
                     fill
                     className="object-cover"
