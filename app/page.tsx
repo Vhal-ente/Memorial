@@ -223,19 +223,9 @@ const CustomMapInner: React.FC<CustomMapInnerProps> = ({ center, zoom }) => {
 /* -------------------------------------------------------------------------- */
 export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // const [fullName, setFullName] = useState("");
-  // const [email, setEmail] = useState("");
-  // const [relationship, setRelationship] = useState("Friend");
-  // const [message, setMessage] = useState("");
-
-
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const mapCenter = { lat: 43.6532, lng: -79.3832 };
 
   const legacyMapItems = [
-    { label: "Photos", icon: "📷", path: "/photos" },
+    { label: "Gallery", icon: "📷", path: "/photos" },
     { label: "Tributes", icon: "💬", path: "/tributes" },
   ];
 
@@ -243,6 +233,34 @@ export default function HomePage() {
     console.log("Submitting Tribute Data Bundle:", data);
     setIsModalOpen(false);
   };
+
+  const scheduleEvents = [
+{
+title: "Service of Songs",
+date: "Thursday, Oct. 8, 2026",
+time: "6:00 PM - 8:00 PM",
+location: "Oguegbu Family House in Ire Village, Obosi, Anambra State",
+},
+{
+title: "Funeral Service",
+date: "Friday, Oct. 9, 2026",
+time: "11:00 AM",
+location: "St. Andrews Church, Obosi, Anambra State",
+},
+{
+title: "Interment",
+date: "Friday, Oct. 9, 2026",
+time: "Immediately following funeral service",
+location: "Oguegbu Family House in Ire Village, Obosi, Anambra State",
+isSpecial: true,
+},
+{
+title: "Thanksgiving Service",
+date: "Sunday, Oct. 11, 2026",
+time: "10:00 AM",
+location: "St. Andrews Church, Obosi, Anambra State",
+},
+];
 
   return (
     <MemorialLayout>
@@ -706,49 +724,82 @@ export default function HomePage() {
             </div>
 
             {/* Card 2: Upcoming Memorial Event Details */}
-            <div className="bg-[#7A1C1C] text-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden border">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-              <span className="text-[10px] font-sans font-bold tracking-widest text-[#C09B4D] uppercase block mb-3">
-                Memorial Service
-              </span>
-              <h4 className="font-serif text-xl text-white tracking-wide mb-4 leading-snug">
-                Celebration of Life Service
-              </h4>
-
-              <div className="space-y-4 text-xs text-stone-300 font-sans tracking-wide">
-                <div className="flex items-center gap-3">
-                  <Calendar size={16} className="text-[#C09B4D] shrink-0" />
-                  <span>February 19, 2026 at 2:30 PM</span>
+            <div className="bg-[#7A1C1C] rounded-3xl p-6 sm:p-8 shadow-[0_4px_30px_rgba(0,0,0,0.015)] border border-stone-200/60 space-y-6 text-left">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]">
+              Celebration of Life Service
+            </span>
+            <h3 className="text-xl font-serif text-white font-bold tracking-wide">
+              Burial Arrangements
+            </h3>
+          </div>
+          
+          <div className="space-y-6">
+            {scheduleEvents.map((event, index) => (
+              <div key={index} className="relative pl-5 border-l-2 border-stone-200/70 space-y-1.5 last:border-0 pb-1">
+                {/* Event Timeline Pin Indicator */}
+                <span className={`absolute -left-[6px] top-1.5 w-[10px] h-[10px] rounded-full border-2 ${
+                  event.isSpecial 
+                    ? "bg-[#D4AF37] border-white ring-2 ring-[#D4AF37]/20" 
+                    : "bg-[#7A1C1C] border-white"
+                }`} />
+                
+                <div>
+                  <h4 className="text-sm font-serif font-bold text-white tracking-wide leading-tight flex items-center gap-1.5">
+                    {event.title}
+                    {event.isSpecial && (
+                      <span className="text-[9px] font-sans font-bold bg-[#FAF6EC] text-[#D4AF37] border border-[#D4AF37]/30 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        Solemn
+                      </span>
+                    )}
+                  </h4>
+                  <p className="flex items-center gap-1 text-[11px] text-[#D4AF37] font-bold uppercase tracking-wide mt-0.5">
+                    <Calendar size={16} className="text-[#C09B4D] shrink-0" />
+                    {event.date}
+                  </p>
                 </div>
-                <div className="flex items-start gap-3 pt-3 border-t border-white/10">
-                  <MapPin
+
+                <div className="space-y-1 text-xs text-stone-300 font-medium">
+                  <p className="flex items-center gap-1">
+                    <span className="text-stone-400 font-bold">Time:</span> {event.time}
+                  </p>
+                  <p className="flex items-start gap-1 leading-relaxed">
+                   <MapPin
                     size={16}
                     className="text-[#C09B4D] mt-0.5 shrink-0"
                   />
-                  <p className="leading-relaxed">
-                    <span className="text-white font-medium block mb-0.5">
-                      Havenbrook Memorial Chapel
-                    </span>
-                    Main Hall Sanctuary Room
+                    <span>{event.location}</span>
                   </p>
                 </div>
               </div>
-            </div>
+            ))}
+          </div>
+          </div>
 
             {/* Card 3: Interactive Location Canvas Map */}
-            <div className="bg-white rounded-3xl p-5 shadow-[0_4px_25px_rgba(0,0,0,0.01)] border border-stone-200/60 space-y-4">
-              <span className="text-stone-400 text-[11px] font-sans font-bold tracking-widest uppercase block">
-                Venue Location Map
-              </span>
-              <div className="w-full h-44 sm:h-52 md:h-60 rounded-2xl overflow-hidden border border-stone-200/60 relative bg-[#F5F4F0]">
-                <Wrapper
-                  apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
-                >
-                  <CustomMapInner center={mapCenter} zoom={14} />
-                </Wrapper>
-              </div>
-            </div>
+           <div className="bg-white rounded-3xl p-4 shadow-[0_4px_30px_rgba(0,0,0,0.015)] border border-stone-200/60 space-y-3">
+          <div className="flex items-center justify-between px-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#7A1C1C]">
+              Ceremony Location
+            </span>
+            <span className="text-[10px] text-stone-400 font-bold uppercase">
+              Ire Village, Obosi
+            </span>
           </div>
+          
+          {/* Native Google Embed Frame Wrapper */}
+          <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden border border-stone-100 bg-stone-50">
+            <iframe 
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31736.95100792439!2d6.789377289656667!3d6.114695046431764!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x104393fbdfee2e53%3A0x43e2932fb4538bff!2sObosi%2C%20Anambra!5e0!3m2!1sen!2sng!4v1781612497015!5m2!1sen!2sng" 
+              className="w-full h-full border-0"
+              allowFullScreen
+              loading="lazy" 
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Obosi Anambra Location Map"
+            />
+          </div>
+        </div>
+        </div>
         </div>
       </div>
 

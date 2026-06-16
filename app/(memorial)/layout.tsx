@@ -2,13 +2,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { AudioProvider, useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/context/AudioContext";
 import { Volume2, VolumeX } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
 /*            INNER LAYOUT CONTENT FRAMEWORK (CONSUMES CONTEXT)               */
 /* -------------------------------------------------------------------------- */
-function MemorialLayoutContent({
+export default function MemorialLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -35,7 +35,7 @@ function MemorialLayoutContent({
             ${
               isPlaying
                 ? "bg-[#7A1C1C] text-white border-amber-600/30"
-                : "bg-white text-stone-700 border-stone-200/80 hover:bg-stone-50"
+                : "bg-[#62d467] text-gray-700 border-stone-200/80 hover:bg-stone-50"
             }`}
         >
           {isPlaying ? (
@@ -45,7 +45,7 @@ function MemorialLayoutContent({
             </>
           ) : (
             <>
-              <VolumeX size={16} className="text-stone-400" />
+              <VolumeX size={16} className="text-gray-700" />
               <span>Music Muted</span>
             </>
           )}
@@ -68,7 +68,7 @@ function MemorialLayoutContent({
               <div className="relative w-36 h-36 mb-6 rounded-full p-1 bg-white shadow-xl ring-2 ring-[#D4AF37]/40 mt-8">
                 <div className="relative w-full h-full rounded-full overflow-hidden">
                   <Image
-                    src="/Photo1.jpg"
+                    src="/photo1.jpg"
                     alt="Ogbueshi Bennett Amaechi Oguegbu"
                     fill
                     className="object-cover"
@@ -148,14 +148,12 @@ function MemorialLayoutContent({
 /* -------------------------------------------------------------------------- */
 /*            MAIN COMPONENT EXPORT (PROVIDES CONTEXT INITIALIZATION)         */
 /* -------------------------------------------------------------------------- */
-export default function MemorialLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <AudioProvider>
-      <MemorialLayoutContent>{children}</MemorialLayoutContent>
-    </AudioProvider>
-  );
-}
+// export default function MemorialLayout({
+//   children,
+// }: {
+//   children: React.ReactNode;
+// }) {
+//   return (
+//       <MemorialLayoutContent>{children}</MemorialLayoutContent>
+//   );
+// }

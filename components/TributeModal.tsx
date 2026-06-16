@@ -90,7 +90,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center pt-8 sm:items-center justify-center bg-black/50 backdrop-blur-md p-0 sm:p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[99999] flex items-center pt-9 sm:items-center justify-center bg-black/50 backdrop-blur-md p-0 sm:p-4 animate-fade-in">
       {/* Absolute background click wrapper safely nested below the modal target */}
       <div className="absolute inset-0" onClick={onClose} />
       
