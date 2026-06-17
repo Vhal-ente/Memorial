@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { AudioProvider } from "@/context/AudioContext";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -27,11 +24,7 @@ export default function RootLayout({
         className={`${inter.variable} ${playfair.variable} antialiased min-h-screen flex flex-col bg-[#F6F5F2]`}
       >
         {/* Wrapping everything at the absolute body root stops Next.js from destroying the audio element during page transitions */}
-        <AudioProvider>
-          <Navbar />
           <div className="grow">{children}</div>
-          <Footer />
-        </AudioProvider>
       </body>
     </html>
   );

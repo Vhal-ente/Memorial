@@ -17,8 +17,6 @@ export interface TributeFormData {
   email: string;
   relationship: string;
   message: string;
-  media: File | null;
-  lightCandle: boolean;
   captchaToken: string;
 }
 
@@ -32,8 +30,6 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
     email: "",
     relationship: "",
     message: "",
-    media: null,
-    lightCandle: false,
     captchaToken: "",
   });
 
@@ -50,8 +46,6 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
           email: "",
           relationship: "",
           message: "",
-          media: null,
-          lightCandle: false,
           captchaToken: "",
         });
         setMediaPreview(null);
@@ -251,7 +245,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
             <label className="block text-[10px] font-bold tracking-wide text-stone-500 uppercase">
               Tribute Message
             </label>
-            <div className="rounded-xl overflow-hidden border border-[#E6DED2] bg-white">
+            <div className="rounded-xl overflow-hidden bg-white">
               <Editor
                 value={formData.message}
                 onChange={handleEditorChange}

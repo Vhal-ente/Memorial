@@ -14,7 +14,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // URL encode the path spaces so the browser locates the file cleanly
+    // 1. Strict guard: Make sure we are 100% inside the browser before doing anything
+    if (typeof window === "undefined") return;
+
     const audioPath = "/audio/" + encodeURIComponent("This World Is Not My Home - Jim Reeves.mp3");
     const audio = new Audio(audioPath);
     audio.loop = true;
@@ -28,18 +30,21 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           removeInteractionListeners();
         })
         .catch((err) => {
-          console.log("Autoplay blocked by browser policy. Awaiting user interaction.", err);
+          console.log("Autoplay blocked by browser policy. Awaiting user interaction.");
         });
     };
 
     const removeInteractionListeners = () => {
+      if (typeof window === "undefined") return;
       window.removeEventListener("click", attemptAutoplay);
       window.removeEventListener("touchstart", attemptAutoplay);
       window.removeEventListener("keydown", attemptAutoplay);
     };
 
+    // Run initial test
     attemptAutoplay();
 
+    // Attach listeners safely on browser window object
     window.addEventListener("click", attemptAutoplay);
     window.addEventListener("touchstart", attemptAutoplay);
     window.addEventListener("keydown", attemptAutoplay);

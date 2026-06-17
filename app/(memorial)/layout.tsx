@@ -2,18 +2,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio, AudioProvider } from "@/context/AudioContext";
 import { Volume2, VolumeX } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 /* -------------------------------------------------------------------------- */
 /*            INNER LAYOUT CONTENT FRAMEWORK (CONSUMES CONTEXT)               */
 /* -------------------------------------------------------------------------- */
-export default function MemorialLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function MemorialLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  // Safe to call now because it runs nested inside <AudioProvider>
   const { isPlaying, togglePlayback } = useAudio();
   
   // Detect if the user is currently looking at the Gallery view
@@ -52,7 +51,7 @@ export default function MemorialLayout({
         </button>
       </div>
 
-      {/* Curved Background Aura Layer — Custom tailored to warm background champagne/gold curves */}
+      {/* Curved Background Aura Layer */}
       {!isPhotosPage && (
         <div className="absolute top-0 left-0 w-full h-[620px] bg-gradient-to-b from-[#F9F3E3] via-[#FAF6EC] to-[#FCFBF8] pointer-events-none z-0 [clip-path:ellipse(100%_100%_at_50%_0%)] opacity-80" />
       )}
@@ -64,7 +63,6 @@ export default function MemorialLayout({
           {/* PROFILE CARD META - Hidden completely when on the Gallery page */}
           {!isPhotosPage && (
             <>
-              {/* Profile Image Border matching the gold frame aesthetic */}
               <div className="relative w-36 h-36 mb-6 rounded-full p-1 bg-white shadow-xl ring-2 ring-[#D4AF37]/40 mt-8">
                 <div className="relative w-full h-full rounded-full overflow-hidden">
                   <Image
@@ -77,7 +75,6 @@ export default function MemorialLayout({
                 </div>
               </div>
 
-              {/* Title Header with Deep Red / Metallic Crimson gradient treatment matching traditional wear */}
               <h1
                 className="text-3xl md:text-5xl font-serif mb-2 tracking-wide font-medium block leading-tight px-4"
                 style={{
@@ -107,32 +104,29 @@ export default function MemorialLayout({
           )}
 
           {!isPhotosPage && (
-            <>
-              {/* Responsive Sub-routing Navigation Track */}
-              <div className="w-full max-w-md mx-auto px-2">
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 w-full bg-stone-100/40 p-1 rounded-full border border-stone-200/30">
-                  {navigationTabs.map((tab) => {
-                    const isSelectedRoute =
-                      pathname === tab.path ||
-                      (tab.path !== "/" && pathname.startsWith(tab.path));
+            <div className="w-full max-w-md mx-auto px-2">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 w-full bg-stone-100/40 p-1 rounded-full border border-stone-200/30">
+                {navigationTabs.map((tab) => {
+                  const isSelectedRoute =
+                    pathname === tab.path ||
+                    (tab.path !== "/" && pathname.startsWith(tab.path));
 
-                    return (
-                      <Link
-                        key={tab.name}
-                        href={tab.path}
-                        className={`text-[10px] sm:text-xs tracking-wider sm:tracking-widest uppercase py-2.5 rounded-full transition-all duration-200 font-semibold text-center block ${
-                          isSelectedRoute
-                            ? "bg-[#7A1C1C] text-white shadow-md ring-1 ring-red-900/10"
-                            : "text-stone-600 bg-white/80 border border-stone-200/40 hover:bg-[#D4AF37] hover:text-white hover:border-[#D4AF37] shadow-sm"
-                        }`}
-                      >
-                        {tab.name}
-                      </Link>
-                    );
-                  })}
-                </div>
+                  return (
+                    <Link
+                      key={tab.name}
+                      href={tab.path}
+                      className={`text-[10px] sm:text-xs tracking-wider sm:tracking-widest uppercase py-2.5 rounded-full transition-all duration-200 font-semibold text-center block ${
+                        isSelectedRoute
+                          ? "bg-[#7A1C1C] text-white shadow-md ring-1 ring-red-900/10"
+                          : "text-stone-600 bg-white/80 border border-stone-200/40 hover:bg-[#D4AF37] hover:text-white hover:border-[#D4AF37] shadow-sm"
+                      }`}
+                    >
+                      {tab.name}
+                    </Link>
+                  );
+                })}
               </div>
-            </>
+            </div>
           )}
         </div>
         
@@ -148,12 +142,12 @@ export default function MemorialLayout({
 /* -------------------------------------------------------------------------- */
 /*            MAIN COMPONENT EXPORT (PROVIDES CONTEXT INITIALIZATION)         */
 /* -------------------------------------------------------------------------- */
-// export default function MemorialLayout({
-//   children,
-// }: {
-//   children: React.ReactNode;
-// }) {
-//   return (
-//       <MemorialLayoutContent>{children}</MemorialLayoutContent>
-//   );
-// }
+export default function MemorialLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AudioProvider>  
+      <Navbar />
+      <MemorialLayoutContent>{children}</MemorialLayoutContent>
+          <Footer />
+    </AudioProvider>
+  );
+}
