@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "react-hot-toast";
 import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${playfair.variable} antialiased min-h-screen flex flex-col bg-[#F6F5F2]`}
       >
+          <Toaster position="top-right" />
         {/* Wrapping everything at the absolute body root stops Next.js from destroying the audio element during page transitions */}
           <div className="grow">{children}</div>
       </body>

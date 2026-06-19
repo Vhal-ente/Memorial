@@ -104,7 +104,7 @@ function DashboardContent() {
   // Sub-view routing — no `dashboard` case to avoid circular render
   if (currentView === "tributes") return <TributeManagement />;
   if (currentView === "gallery")  return <GalleryManagement />;
-  if (currentView === "emails")   return <EmailBroadcastCenter />;
+  // if (currentView === "emails")   return <EmailBroadcastCenter />;
 
   // ── Default overview ──
   return (

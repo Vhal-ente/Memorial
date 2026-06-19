@@ -2,6 +2,7 @@
 
 import React, { Suspense } from "react";
 import Link from "next/link";
+import { SessionProvider } from "next-auth/react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ShieldCheck, MessageSquare, ImageIcon, Mail } from "lucide-react";
 
@@ -24,7 +25,7 @@ const navItems = [
   { label: "Dashboard",        icon: ShieldCheck,    view: null       },
   { label: "Manage Tributes",  icon: MessageSquare,  view: "tributes" },
   { label: "Gallery",          icon: ImageIcon,      view: "gallery"  },
-  { label: "Emails",           icon: Mail,           view: "emails"   },
+  // { label: "Emails",           icon: Mail,           view: "emails"   },
 ] as const;
 
 type NavView = (typeof navItems)[number]["view"];
@@ -123,6 +124,7 @@ export default function AdminRootLayout({
   };
 
   return (
+    <SessionProvider>
     <div className="min-h-screen flex bg-[#FAF8F5] text-stone-900 font-sans">
 
       {/* ── Sidebar ── */}
@@ -155,7 +157,7 @@ export default function AdminRootLayout({
       <main className={`flex-1 ${CONTENT_OFFSET} min-h-screen bg-[#FAF8F5]`}>
         {children}
       </main>
-
     </div>
+    </SessionProvider>
   );
 }
