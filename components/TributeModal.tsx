@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import { X, Loader2 } from "lucide-react";
-import { Turnstile } from "@marsidev/react-turnstile";
 import { Editor } from "@/components/TextEditor";
 import { api } from "@/lib/api/axios";
 
@@ -18,7 +17,6 @@ export interface TributeFormData {
   phoneNumber: string;
   relationship: string;
   message: string;
-  captchaToken: string;
 }
 
 export const TributeModal: React.FC<CreateTributeModalProps> = ({
@@ -32,7 +30,6 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
     phoneNumber: "",
     relationship: "",
     message: "",
-    captchaToken: "",
   });
 
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -50,7 +47,6 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
           phoneNumber: "",
           relationship: "",
           message: "",
-          captchaToken: "",
         });
         setAttachedFiles([]);
         setSubmitError(null);
@@ -79,10 +75,6 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
       return;
     }
 
-    if (!formData.captchaToken) {
-      setSubmitError("Please complete the verification");
-      return;
-    }
 
     try {
       setSubmitting(true);
@@ -115,7 +107,6 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
           relationship: formData.relationship,
           email: formData.email,
           phoneNumber: formData.phoneNumber,
-          captchaToken: formData.captchaToken,
         });
         onClose();
       } else {
@@ -287,7 +278,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
               required
             />
           </div>
-          
+
           {/* Relationship Selector */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold tracking-wide text-stone-500 uppercase">
@@ -353,24 +344,6 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
             )}
           </div>
 
-          {/* Verification Engine Track */}
-          <div className="flex justify-center pt-2 max-w-full overflow-x-auto no-scrollbar">
-            <Turnstile
-              siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY!}
-              onSuccess={(token) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  captchaToken: token,
-                }))
-              }
-              onExpire={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  captchaToken: "",
-                }))
-              }
-            />
-          </div>
 
           {submitError && (
             <p className="text-xs text-center text-red-600 font-medium px-2">

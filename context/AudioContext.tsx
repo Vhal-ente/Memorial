@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 interface AudioContextType {
   isPlaying: boolean;
@@ -9,62 +15,85 @@ interface AudioContextType {
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
-export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+// Module-level singleton — survives React unmounts / route changes
+let globalAudio: HTMLAudioElement | null = null;
+
+function getOrCreateAudio(): HTMLAudioElement {
+  if (!globalAudio) {
+    const audioPath =
+      "/audio/" +
+      encodeURIComponent("This World Is Not My Home - Jim Reeves.mp3");
+    globalAudio = new Audio(audioPath);
+    globalAudio.loop = true;
+  }
+  return globalAudio;
+}
+
+export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  // Initialise directly from the singleton so no setState call is needed in the effect
+  const [isPlaying, setIsPlaying] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !getOrCreateAudio().paused;
+  });
+
+  const isPlayingRef = useRef(isPlaying);
 
   useEffect(() => {
-    // 1. Strict guard: Make sure we are 100% inside the browser before doing anything
-    if (typeof window === "undefined") return;
-
-    const audioPath = "/audio/" + encodeURIComponent("This World Is Not My Home - Jim Reeves.mp3");
-    const audio = new Audio(audioPath);
-    audio.loop = true;
-    audioRef.current = audio;
+    const audio = getOrCreateAudio();
 
     const attemptAutoplay = () => {
+      if (!audio.paused) return;
+
       audio
         .play()
         .then(() => {
-          setIsPlaying(true);
           removeInteractionListeners();
         })
-        .catch((err) => {
-          console.log("Autoplay blocked by browser policy. Awaiting user interaction.");
+        .catch(() => {
+          console.log("Autoplay blocked — waiting for user interaction.");
         });
     };
 
     const removeInteractionListeners = () => {
-      if (typeof window === "undefined") return;
       window.removeEventListener("click", attemptAutoplay);
       window.removeEventListener("touchstart", attemptAutoplay);
       window.removeEventListener("keydown", attemptAutoplay);
     };
 
-    // Run initial test
     attemptAutoplay();
 
-    // Attach listeners safely on browser window object
     window.addEventListener("click", attemptAutoplay);
     window.addEventListener("touchstart", attemptAutoplay);
     window.addEventListener("keydown", attemptAutoplay);
 
+    // Let audio events drive all state updates — no direct setState in effect body
+    const handlePause = () => {
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+    };
+    const handlePlay = () => {
+      setIsPlaying(true);
+      isPlayingRef.current = true;
+    };
+
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("play", handlePlay);
+
     return () => {
-      audio.pause();
       removeInteractionListeners();
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("play", handlePlay);
     };
   }, []);
 
   const togglePlayback = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
+    const audio = getOrCreateAudio();
+    if (!audio.paused) {
+      audio.pause(); // triggers "pause" event → setIsPlaying(false)
     } else {
-      audioRef.current
-        .play()
-        .catch((err) => console.log("Playback error:", err));
-      setIsPlaying(true);
+      audio.play().catch((err) => console.log("Playback error:", err)); // triggers "play" event → setIsPlaying(true)
     }
   };
 

@@ -49,9 +49,7 @@ export default function MediaGalleryView() {
 
   // Navigation and Selection Local States
   const [activeTab, setActiveTab] = useState("All");
-  const [selectedMedia, setSelectedMedia] = useState<GalleryImage | null>(
-    null,
-  );
+  const [selectedMedia, setSelectedMedia] = useState<GalleryImage | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Gallery data states
@@ -71,6 +69,8 @@ export default function MediaGalleryView() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const [hasMore, setHasMore] = useState(true);
+
   const albumFolders = [
     {
       title: "The Oguegbu Family Archive",
@@ -84,35 +84,36 @@ export default function MediaGalleryView() {
     },
   ];
 
-  const loadImages = useCallback(
-    async (cursor: number, isInitial: boolean) => {
-      try {
-        isInitial ? setLoading(true) : setLoadingMore(true);
+  const loadImages = useCallback(async (cursor: number, isInitial: boolean) => {
+    try {
+      isInitial ? setLoading(true) : setLoadingMore(true);
 
-        const { data } = await api.get(
-          `/api/images/all?limit=${PAGE_SIZE}`,
+      const { data } = await api.get(
+        `/api/images/all?limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ""}`,
+      );
+
+      if (data.success) {
+        const newImages: GalleryImage[] = data.data || [];
+        const approvedImages = newImages.filter((img) => !img.isDeleted);
+
+        setImages((prev) =>
+          isInitial ? approvedImages : [...prev, ...approvedImages],
         );
 
-        if (data.success) {
-          const newImages: GalleryImage[] = data.data || [];
+        const nextCur = data.nextCursor ?? null;
+        setNextCursor(nextCur);
 
-          setImages((prev) =>
-            isInitial ? newImages : [...prev, ...newImages],
-          );
-          setNextCursor(
-            data.nextCursor === null || data.nextCursor === undefined
-              ? null
-              : data.nextCursor,
-          );
+        // Hide button if no more approved images came back or API signals end
+        if (approvedImages.length === 0 || nextCur === null) {
+          setHasMore(false);
         }
-      } catch (error) {
-        console.error("Error fetching gallery images:", error);
-      } finally {
-        isInitial ? setLoading(false) : setLoadingMore(false);
       }
-    },
-    [],
-  );
+    } catch (error) {
+      console.error("Error fetching gallery images:", error);
+    } finally {
+      isInitial ? setLoading(false) : setLoadingMore(false);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,9 +122,7 @@ export default function MediaGalleryView() {
       try {
         setLoading(true);
 
-        const { data } = await api.get(
-          `/api/images/all?limit=${PAGE_SIZE}`,
-        );
+        const { data } = await api.get(`/api/images/all?limit=${PAGE_SIZE}`);
 
         if (!cancelled && data.success) {
           const newImages: GalleryImage[] = data.data || [];
@@ -135,8 +134,7 @@ export default function MediaGalleryView() {
           );
         }
       } catch (error) {
-        if (!cancelled)
-          console.error("Error fetching gallery images:", error);
+        if (!cancelled) console.error("Error fetching gallery images:", error);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -241,10 +239,11 @@ export default function MediaGalleryView() {
     }
   };
 
-  const filteredMedia = images.filter((item) => {
-    if (activeTab === "All") return true;
-    return item.category === activeTab;
-  });
+ const filteredMedia = images.filter((item) => {
+  if (item.isDeleted) return false; // isDeleted: true = PENDING, hide these
+  if (activeTab === "All") return true;
+  return item.category === activeTab;
+});
 
   return (
     <div className="space-y-12 sm:space-y-16 max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 pb-24 text-left mt-4 sm:mt-12 relative bg-[#FCFBF8] min-h-screen">
@@ -366,18 +365,21 @@ export default function MediaGalleryView() {
       )}
 
       {/* Pagination */}
-      {!loading && nextCursor !== null && filteredMedia.length > 0 && (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="border border-[#E6DED2] text-stone-700 font-semibold text-xs px-8 py-3.5 rounded-full hover:bg-[#7A1C1C] hover:text-white hover:border-[#7A1C1C] transition-all uppercase tracking-widest bg-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loadingMore ? "Loading..." : "Load Earlier Frames"}
-          </button>
-        </div>
-      )}
+      {!loading &&
+        hasMore &&
+        nextCursor !== null &&
+        filteredMedia.length > 0 && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="..."
+            >
+              {loadingMore ? "Loading..." : "Load More Frames"}
+            </button>
+          </div>
+        )}
 
       {/* 4. Curated Folder Collections Section Block */}
       {/* <div className="border-t border-[#E6DED2] pt-12 sm:pt-16">
@@ -515,7 +517,9 @@ export default function MediaGalleryView() {
         <div className="fixed inset-0 z-50 flex items-center pt-8 sm:items-center justify-center p-0 sm:p-4 bg-stone-900/50 backdrop-blur-md transition-opacity duration-300">
           <div
             className="absolute inset-0"
-            onClick={() => (uploading ? undefined : setIsUploadModalOpen(false))}
+            onClick={() =>
+              uploading ? undefined : setIsUploadModalOpen(false)
+            }
           />
 
           <div className="bg-white rounded-t-[2rem] rounded-b-[1rem] sm:rounded-3xl p-6 sm:p-8 w-full max-w-xl shadow-2xl border border-stone-100 relative z-10 flex flex-col max-h-[85dvh] sm:max-h-[85vh] overflow-hidden transform transition-all duration-300 scale-100">
