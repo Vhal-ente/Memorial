@@ -24,6 +24,7 @@ interface TributeRequest {
   date: string;
   timeAgo: string;
   attachmentUrl: string;
+  initials: string;
   status: "pending" | "approved" | "rejected";
 }
 
@@ -52,6 +53,14 @@ export default function TributeManagement() {
       attachmentUrl: item.attachmentUrl
         ? `${API_BASE}/uploads${item.attachmentUrl}`
         : "",
+      initials:
+        item.authorName
+          ?.trim()
+          .split(/\s+/)
+          .slice(0, 2)
+          .map((word: string[]) => word[0])
+          .join("")
+          .toUpperCase() || "UN",
       status: item.status, // use API directly
     }));
   };
@@ -107,7 +116,7 @@ export default function TributeManagement() {
         );
 
         await approveTribute(numericId);
-          toast.success("Tribute approved");
+        toast.success("Tribute approved");
       }
 
       if (action === "reject") {
@@ -117,21 +126,21 @@ export default function TributeManagement() {
 
         await rejectTribute(numericId);
         toast("Image rejected", {
-        icon: "⚠️",
-      });
+          icon: "⚠️",
+        });
       }
 
       if (action === "delete") {
         setTributes((prev) => prev.filter((t) => t.id !== id));
 
         await deleteTribute(numericId);
-         toast.error("Image deleted");
+        toast.error("Image deleted");
       }
     } catch (error) {
       console.error(error);
 
       await fetchTributes(0, false);
-        toast.error("Action failed. Reverted.");
+      toast.error("Action failed. Reverted.");
     }
   };
 
@@ -186,6 +195,7 @@ export default function TributeManagement() {
             className="bg-white border border-[#EDEAE4] rounded-xl p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row gap-6 items-start justify-between"
           >
             <div className="flex items-start gap-5 flex-1">
+              {/* {tribute.attachmentUrl ? (
               <div className="relative w-12 h-12 rounded-full overflow-hidden border border-stone-200/60 shrink-0 bg-stone-100">
                 {tribute.attachmentUrl && (
                   <Image
@@ -197,6 +207,11 @@ export default function TributeManagement() {
                   />
                 )}
               </div>
+                ) : ( */}
+              <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-xs font-bold text-stone-500 border border-stone-200 shrink-0">
+                {tribute.initials}
+              </div>
+              {/* )} */}
 
               <div className="space-y-2.5 max-w-2xl">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -214,10 +229,15 @@ export default function TributeManagement() {
                 </p>
 
                 <div className="flex items-center gap-4 text-[10px] text-stone-400 font-bold font-sans tracking-wide">
-                <span className="flex items-center gap-1"> <Calendar size={12} strokeWidth={3} />
-                     {tribute.date}</span>
-                  <span className="flex items-center gap-1"><Clock1Icon size={12} strokeWidth={3} />
-                     {tribute.timeAgo} </span>
+                  <span className="flex items-center gap-1">
+                    {" "}
+                    <Calendar size={12} strokeWidth={3} />
+                    {tribute.date}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock1Icon size={12} strokeWidth={3} />
+                    {tribute.timeAgo}{" "}
+                  </span>
                 </div>
               </div>
             </div>

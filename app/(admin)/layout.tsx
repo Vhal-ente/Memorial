@@ -25,7 +25,7 @@ const navItems = [
   { label: "Dashboard",        icon: ShieldCheck,    view: null       },
   { label: "Manage Tributes",  icon: MessageSquare,  view: "tributes" },
   { label: "Gallery",          icon: ImageIcon,      view: "gallery"  },
-  // { label: "Emails",           icon: Mail,           view: "emails"   },
+  { label: "Emails",           icon: Mail,           view: "emails"   },
 ] as const;
 
 type NavView = (typeof navItems)[number]["view"];

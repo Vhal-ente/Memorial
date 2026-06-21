@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Search, Trash2 } from "lucide-react";
-import { getAdminImages, deleteImage } from "@/lib/api/gallery";
+import { getAdminImages, deleteImage, restoreImage } from "@/lib/api/gallery";
 import toast from "react-hot-toast";
 
 interface ApiImage {
@@ -12,6 +12,7 @@ interface ApiImage {
   description: string;
   filename: string;
   category: string;
+  uploadedBy: string;
   thumbUrl: string;
   mediumUrl: string;
   originalUrl: string;
@@ -48,7 +49,7 @@ const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
       return {
         id: String(item.id),
         title: item.title || "Untitled",
-        uploader: "Anonymous", // Map to dynamic uploader if added to your schema later
+        uploader: item.uploadedBy || "Anonymous", // Map to dynamic uploader if added to your schema later
         quote: item.description,
         imageSrc: path ? `${API_BASE}/uploads${path}` : "",
         avatarSrc: undefined,
@@ -104,18 +105,18 @@ const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const snapshot = mediaItems;
 
     try {
-      // if (action === "approve") {
-      //   setMediaItems((prev) =>
-      //     prev.map((item) =>
-      //       item.id === id
-      //         ? { ...item, status: "APPROVED" }
-      //         : item
-      //     )
-      //   );
+      if (action === "approve") {
+        setMediaItems((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? { ...item, status: "APPROVED" }
+              : item
+          )
+        );
 
-      //   await approveImage(numericId);
-      //  toast.success("Image approved");
-      // }
+        await restoreImage(numericId);
+       toast.success("Image approved");
+      }
 
       // if (action === "reject") {
       //   setMediaItems((prev) =>

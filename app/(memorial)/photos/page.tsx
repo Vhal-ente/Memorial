@@ -1,16 +1,47 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { 
-  X, 
-  Camera, 
-  Plus, 
-  Sparkles, 
-  FolderOpen, 
-  Download
+import {
+  X,
+  Camera,
+  Plus,
+  Sparkles,
+  FolderOpen,
+  Download,
+  Loader2,
 } from "lucide-react";
+import { api } from "@/lib/api/axios";
+
+interface GalleryImage {
+  id: number;
+  title: string;
+  description: string;
+  filename: string;
+  category: string;
+  thumbUrl: string;
+  mediumUrl: string;
+  originalUrl: string;
+  createdAt: string;
+  isDeleted: boolean;
+  deletedAt: string | null;
+}
+
+const PAGE_SIZE = 20;
+
+// Cycles through a few card heights so the masonry grid doesn't look uniform
+const TILE_HEIGHTS = [
+  "h-48 sm:h-60",
+  "h-52 sm:h-64",
+  "h-48 sm:h-60",
+  "h-56 sm:h-72",
+];
+
+function assetUrl(path?: string) {
+  if (!path) return "";
+  return `${process.env.NEXT_PUBLIC_API_URL ?? ""}${path}`;
+}
 
 export default function MediaGalleryView() {
   const router = useRouter();
@@ -18,8 +49,16 @@ export default function MediaGalleryView() {
 
   // Navigation and Selection Local States
   const [activeTab, setActiveTab] = useState("All");
-  const [selectedMedia, setSelectedMedia] = useState<any>(null);
+  const [selectedMedia, setSelectedMedia] = useState<GalleryImage | null>(
+    null,
+  );
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  // Gallery data states
+  const [images, setImages] = useState<GalleryImage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<number | null>(0);
 
   // Upload Management States
   const [uploadForm, setUploadForm] = useState({
@@ -29,42 +68,8 @@ export default function MediaGalleryView() {
     mediaFile: null as File | null,
   });
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
-
-  // Core Gallery Data Mapping - Pure Image structures
-  const mediaItems = [
-    {
-      id: 1,
-      type: "photo",
-      category: "Family",
-      src: "/images/gallery/portrait-main.jpg",
-      aspectRatio: "md:row-span-2 h-72 sm:h-96 md:h-[520px]",
-      alt: "Ogbueshi Bennett Amaechi Oguegbu Portrait",
-    },
-    {
-      id: 2,
-      type: "photo",
-      category: "Family",
-      src: "/images/gallery/family-gathering.jpg",
-      aspectRatio: "h-48 sm:h-60",
-      alt: "Oguegbu Family house in Ire Village, Obosi",
-    },
-    {
-      id: 3,
-      type: "photo",
-      category: "Work",
-      src: "/images/gallery/immigration-service.jpg",
-      aspectRatio: "h-48 sm:h-60",
-      alt: "Honorable public service historical records",
-    },
-    {
-      id: 5,
-      type: "photo",
-      category: "Friends",
-      src: "/images/gallery/comptroller-uniform.jpg",
-      aspectRatio: "h-52 sm:h-64",
-      alt: "Comptroller of Immigration structural archive uniform",
-    },
-  ];
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const albumFolders = [
     {
@@ -79,15 +84,101 @@ export default function MediaGalleryView() {
     },
   ];
 
+  const loadImages = useCallback(
+    async (cursor: number, isInitial: boolean) => {
+      try {
+        isInitial ? setLoading(true) : setLoadingMore(true);
+
+        const { data } = await api.get(
+          `/api/images/all?limit=${PAGE_SIZE}&cursor=${cursor}`,
+        );
+
+        if (data.success) {
+          const newImages: GalleryImage[] = data.data || [];
+
+          setImages((prev) =>
+            isInitial ? newImages : [...prev, ...newImages],
+          );
+          setNextCursor(
+            data.nextCursor === null || data.nextCursor === undefined
+              ? null
+              : data.nextCursor,
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching gallery images:", error);
+      } finally {
+        isInitial ? setLoading(false) : setLoadingMore(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchInitial() {
+      try {
+        setLoading(true);
+
+        const { data } = await api.get(
+          `/api/images/all?limit=${PAGE_SIZE}&cursor=0`,
+        );
+
+        if (!cancelled && data.success) {
+          const newImages: GalleryImage[] = data.data || [];
+          setImages(newImages);
+          setNextCursor(
+            data.nextCursor === null || data.nextCursor === undefined
+              ? null
+              : data.nextCursor,
+          );
+        }
+      } catch (error) {
+        if (!cancelled)
+          console.error("Error fetching gallery images:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchInitial();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleLoadMore = () => {
+    if (nextCursor !== null) {
+      loadImages(nextCursor, false);
+    }
+  };
+
   // Lifecycle Reset on Upload Canvas Termination
   useEffect(() => {
     if (!isUploadModalOpen) {
       startTransition(() => {
-        setUploadForm({ title: "", category: "Family", description: "", mediaFile: null });
+        setUploadForm({
+          title: "",
+          category: "Family",
+          description: "",
+          mediaFile: null,
+        });
         setUploadPreview(null);
+        setUploadError(null);
       });
     }
   }, [isUploadModalOpen]);
+
+  // Revoke the preview object URL when it's replaced or the modal unmounts
+  useEffect(() => {
+    return () => {
+      if (uploadPreview) {
+        URL.revokeObjectURL(uploadPreview);
+      }
+    };
+  }, [uploadPreview]);
 
   const handleFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,32 +187,67 @@ export default function MediaGalleryView() {
     const isImg = file.type.startsWith("image/");
 
     if (!isImg) {
-      alert("Unsupported file format string. Please inject a standard image element container.");
+      setUploadError("Please select an image file");
+      e.target.value = "";
       return;
     }
 
-    setUploadForm(prev => ({ ...prev, mediaFile: file }));
+    if (uploadPreview) {
+      URL.revokeObjectURL(uploadPreview);
+    }
+
+    setUploadError(null);
+    setUploadForm((prev) => ({ ...prev, mediaFile: file }));
     setUploadPreview(URL.createObjectURL(file));
   };
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!uploadForm.mediaFile) {
-      alert("Please select a physical file to submit.");
+      setUploadError("Please select an image to upload");
       return;
     }
-    console.log("Intercepted Media Node Upload Payload Bundle:", uploadForm);
-    setIsUploadModalOpen(false);
+
+    try {
+      setUploading(true);
+      setUploadError(null);
+
+      const payload = new FormData();
+      payload.append("title", uploadForm.title);
+      payload.append("description", uploadForm.description);
+      payload.append("category", uploadForm.category);
+      payload.append("file", uploadForm.mediaFile);
+
+      const { data } = await api.post("/api/images/upload", payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (data.success) {
+        setImages((prev) => [data.image, ...prev]);
+        setIsUploadModalOpen(false);
+      } else {
+        setUploadError(data.message || "Failed to upload image");
+      }
+    } catch (error: any) {
+      console.error(error);
+      setUploadError(
+        error?.response?.data?.message || "Failed to upload image",
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const filteredMedia = mediaItems.filter((item) => {
+  const filteredMedia = images.filter((item) => {
     if (activeTab === "All") return true;
     return item.category === activeTab;
   });
 
   return (
     <div className="space-y-12 sm:space-y-16 max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 pb-24 text-left mt-4 sm:mt-12 relative bg-[#FCFBF8] min-h-screen">
-      
       {/* 1. Header Navigation Container */}
       <div className="flex flex-col md:block md:relative">
         <div className="md:absolute md:top-0 md:left-0">
@@ -152,74 +278,109 @@ export default function MediaGalleryView() {
       {/* 2. Media Filter Tab Track */}
       <div className="w-full overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 flex justify-start sm:justify-center">
         <div className="flex gap-2.5 whitespace-nowrap pb-2 sm:pb-0">
-          {["All", "Family", "Friends", "Work"].map(
-            (tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-[11px] tracking-widest uppercase px-5 py-2.5 rounded-full transition-all duration-200 font-semibold shadow-sm border ${
-                  activeTab === tab
-                    ? "bg-[#7A1C1C] text-white border-red-900/10"
-                    : "bg-white text-stone-600 border-stone-200/60 hover:bg-red-50/40 hover:text-[#7A1C1C]"
-                }`}
-              >
-                {tab === "All" ? "All Frames" : tab}
-              </button>
-            ),
-          )}
-        </div>
-      </div>
-
-      {/* 3. Main Masonry Structural Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-start">
-        {/* Left Column Stack Box Wrapper */}
-        <div className="md:col-span-1 space-y-5 sm:space-y-6">
-          {filteredMedia
-            .filter((_, i) => i === 0)
-            .map((item) => (
-              <div
-                key={item.id}
-                onClick={() => setSelectedMedia(item)}
-                className={`relative rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-md border border-stone-200/50 p-1 transition-all duration-300 cursor-pointer group ${item.aspectRatio}`}
-              >
-                <div className="relative w-full h-full rounded-[20px] overflow-hidden">
-                  <Image
-                    src={item.src}
-                    alt={item.alt}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 380px"
-                    className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                    priority
-                  />
-                </div>
-              </div>
-            ))}
-        </div>
-
-        {/* Right 2-Column Split Mesh Layout */}
-        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-          {filteredMedia.slice(1).map((item) => (
-            <div
-              key={item.id}
-              onClick={() => setSelectedMedia(item)}
-              className={`relative rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-md border border-stone-200/50 p-1 transition-all duration-300 cursor-pointer group ${item.aspectRatio}`}
+          {["All", "Family", "Friends", "Work"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`text-[11px] tracking-widest uppercase px-5 py-2.5 rounded-full transition-all duration-200 font-semibold shadow-sm border ${
+                activeTab === tab
+                  ? "bg-[#7A1C1C] text-white border-red-900/10"
+                  : "bg-white text-stone-600 border-stone-200/60 hover:bg-red-50/40 hover:text-[#7A1C1C]"
+              }`}
             >
-              <div className="relative w-full h-full rounded-[20px] overflow-hidden">
-                <Image
-                  src={item.src}
-                  alt={item.alt}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
-                  className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                />
-              </div>
-            </div>
+              {tab === "All" ? "All Frames" : tab}
+            </button>
           ))}
         </div>
       </div>
 
+      {/* 3. Main Masonry Structural Grid Layout */}
+      {loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="rounded-3xl overflow-hidden bg-white border border-stone-200/50 p-1 animate-pulse"
+            >
+              <div className="w-full h-52 sm:h-60 rounded-[20px] bg-stone-200" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && filteredMedia.length === 0 && (
+        <div className="bg-white rounded-3xl p-10 sm:p-16 border border-stone-200/50 text-center">
+          <p className="text-sm text-stone-500">
+            No images in this collection yet.
+          </p>
+        </div>
+      )}
+
+      {!loading && filteredMedia.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-start">
+          {/* Left Column Stack Box Wrapper */}
+          <div className="md:col-span-1 space-y-5 sm:space-y-6">
+            {filteredMedia
+              .filter((_, i) => i === 0)
+              .map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedMedia(item)}
+                  className="relative rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-md border border-stone-200/50 p-1 transition-all duration-300 cursor-pointer group h-72 sm:h-96 md:h-[520px]"
+                >
+                  <div className="relative w-full h-full rounded-[20px] overflow-hidden">
+                    <Image
+                      src={assetUrl(item.mediumUrl)}
+                      alt={item.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 380px"
+                      className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                      priority
+                    />
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          {/* Right 2-Column Split Mesh Layout */}
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+            {filteredMedia.slice(1).map((item, i) => (
+              <div
+                key={item.id}
+                onClick={() => setSelectedMedia(item)}
+                className={`relative rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-md border border-stone-200/50 p-1 transition-all duration-300 cursor-pointer group ${TILE_HEIGHTS[i % TILE_HEIGHTS.length]}`}
+              >
+                <div className="relative w-full h-full rounded-[20px] overflow-hidden">
+                  <Image
+                    src={assetUrl(item.mediumUrl)}
+                    alt={item.title}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
+                    className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && nextCursor !== null && filteredMedia.length > 0 && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="border border-[#E6DED2] text-stone-700 font-semibold text-xs px-8 py-3.5 rounded-full hover:bg-[#7A1C1C] hover:text-white hover:border-[#7A1C1C] transition-all uppercase tracking-widest bg-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingMore ? "Loading..." : "Load Earlier Frames"}
+          </button>
+        </div>
+      )}
+
       {/* 4. Curated Folder Collections Section Block */}
-      <div className="border-t border-[#E6DED2] pt-12 sm:pt-16">
+      {/* <div className="border-t border-[#E6DED2] pt-12 sm:pt-16">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 text-xs font-semibold tracking-widest text-[#D4AF37] uppercase">
@@ -262,13 +423,16 @@ export default function MediaGalleryView() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* 5. Lightbox Viewport Details Modal */}
       {selectedMedia && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
-          <div className="absolute inset-0" onClick={() => setSelectedMedia(null)} />
-          
+          <div
+            className="absolute inset-0"
+            onClick={() => setSelectedMedia(null)}
+          />
+
           <div className="bg-white rounded-3xl overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 shadow-2xl relative border border-stone-100 max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-visible z-10 transform scale-100 transition-all duration-300">
             <button
               onClick={() => setSelectedMedia(null)}
@@ -281,8 +445,8 @@ export default function MediaGalleryView() {
             <div className="md:col-span-7 bg-stone-50 min-h-[280px] sm:min-h-[360px] md:h-[500px] relative flex items-center justify-center p-2 border-r border-stone-100">
               <div className="w-full h-full relative rounded-2xl overflow-hidden">
                 <Image
-                  src={selectedMedia.src}
-                  alt={selectedMedia.alt}
+                  src={assetUrl(selectedMedia.originalUrl)}
+                  alt={selectedMedia.title}
                   fill
                   className="object-contain"
                   sizes="(max-width: 768px) 100vw, 550px"
@@ -295,10 +459,10 @@ export default function MediaGalleryView() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-sans font-bold tracking-widest text-[#7A1C1C] uppercase bg-red-50 border border-red-100 px-2.5 py-1 rounded-md">
-                    Photo Node
+                    {selectedMedia.category || "Photo Node"}
                   </span>
                   <span className="text-xs text-stone-400 font-mono font-semibold">
-                    {selectedMedia.date || "Historical Archive"}
+                    {new Date(selectedMedia.createdAt).toLocaleDateString()}
                   </span>
                 </div>
 
@@ -308,20 +472,26 @@ export default function MediaGalleryView() {
 
                 <p className="text-sm text-stone-600 font-medium leading-relaxed font-sans max-h-36 overflow-y-auto pr-1">
                   {selectedMedia.description ||
-                    '"A structural memory node celebrating the community interactions, high integrity, and timeline pathways of Ogbueshi Bennett Amaechi Oguegbu."'}
+                    "A preserved memory from the family archive."}
                 </p>
               </div>
 
               <div className="flex items-center gap-3 pt-4 border-t border-stone-100">
-                <button 
+                <button
                   onClick={() => setSelectedMedia(null)}
                   className="flex-1 bg-[#7A1C1C] hover:bg-[#5C1313] text-white text-xs font-bold py-4 px-4 rounded-xl uppercase tracking-wider transition-colors text-center shadow-md flex items-center justify-center gap-1.5"
                 >
                   Enlarge Workspace
                 </button>
-                <button className="bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-600 font-semibold text-xs py-4 px-4 rounded-xl transition-all shadow-sm flex items-center gap-1">
+                <a
+                  href={assetUrl(selectedMedia.originalUrl)}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-600 font-semibold text-xs py-4 px-4 rounded-xl transition-all shadow-sm flex items-center gap-1"
+                >
                   <Download size={14} /> Download
-                </button>
+                </a>
               </div>
             </div>
           </div>
@@ -334,108 +504,166 @@ export default function MediaGalleryView() {
         aria-label="Upload to Archive Gallery"
         className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 bg-[#D4AF37] text-white p-4 rounded-full shadow-2xl hover:bg-[#7A1C1C] hover:scale-105 active:scale-95 transition-all duration-200 group focus:outline-none"
       >
-        <Plus size={24} className="transition-transform group-hover:rotate-90 duration-200" />
+        <Plus
+          size={24}
+          className="transition-transform group-hover:rotate-90 duration-200"
+        />
       </button>
 
       {/* 7. DYNAMIC DIGITAL SANCTUARY UPLOAD DIALOG OVERLAY */}
-{isUploadModalOpen && (
-  <div className="fixed inset-0 z-50 flex items-center pt-8 sm:items-center justify-center p-0 sm:p-4 bg-stone-900/50 backdrop-blur-md transition-opacity duration-300">
-    <div className="absolute inset-0" onClick={() => setIsUploadModalOpen(false)} />
-    
-    <div className="bg-white rounded-t-[2rem] rounded-b-[1rem] sm:rounded-3xl p-6 sm:p-8 w-full max-w-xl shadow-2xl border border-stone-100 relative z-10 flex flex-col max-h-[85dvh] sm:max-h-[85vh] overflow-hidden transform transition-all duration-300 scale-100">
-      
-      {/* Header Title Grid Layer — Fixed Height */}
-      <div className="flex items-center justify-between pb-4 border-b border-stone-200 shrink-0">
-        <div className="flex items-center gap-2">
-          <Camera size={18} className="text-[#7A1C1C]" />
-          <h3 className="text-lg font-serif text-[#7A1C1C] font-bold tracking-wide">
-            Contribute Media Frame
-          </h3>
-        </div>
-        <button 
-          onClick={() => setIsUploadModalOpen(false)}
-          className="text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-all p-1.5 rounded-full"
-        >
-          <X size={18} />
-        </button>
-      </div>
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center pt-8 sm:items-center justify-center p-0 sm:p-4 bg-stone-900/50 backdrop-blur-md transition-opacity duration-300">
+          <div
+            className="absolute inset-0"
+            onClick={() => (uploading ? undefined : setIsUploadModalOpen(false))}
+          />
 
-      {/* Scrollable Context Fields Input Block — Form takes full height & handles inner overflow */}
-      <form className="flex-1 flex flex-col min-h-0 pt-4" onSubmit={handleUploadSubmit}>
-        
-        {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1 pb-4 scrollbar-thin text-left">
-          <div className="space-y-1.5">
-            <label className="text-stone-500 font-bold uppercase tracking-wide text-[10px]">Title</label>
-            <input 
-              type="text" 
-              placeholder="e.g. Service in Kano, 1982"
-              value={uploadForm.title}
-              onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full px-4 py-3 rounded-xl bg-[#FCFBF8] border border-[#E6DED2] text-stone-800 focus:outline-none focus:border-stone-400 focus:ring-1 focus:ring-stone-400 transition-all text-sm" 
-              required
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-stone-500 font-bold uppercase tracking-wide text-[10px]">Categories</label>
-            <select 
-              value={uploadForm.category}
-              onChange={(e) => setUploadForm(prev => ({ ...prev, category: e.target.value }))}
-              className="w-full px-4 py-3 rounded-xl bg-[#FCFBF8] border border-[#E6DED2] text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 text-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23706E6B%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_auto] bg-[right_16px_center] bg-no-repeat" 
-              required
-            >
-              <option value="Family">Family</option>
-              <option value="Friends">Friends</option>
-              <option value="Work">Work</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-stone-500 font-bold uppercase tracking-wide text-[10px]">Media File Attachment</label>
-            <label className="flex flex-col items-center justify-center gap-2 py-6 border-2 border-dashed border-[#E6DED2] hover:border-[#D4AF37] rounded-2xl cursor-pointer bg-[#FCFBF8] transition-all group">
-              <div className="flex gap-2 text-stone-400 group-hover:text-[#7A1C1C] transition-colors">
-                <Camera size={18} />
+          <div className="bg-white rounded-t-[2rem] rounded-b-[1rem] sm:rounded-3xl p-6 sm:p-8 w-full max-w-xl shadow-2xl border border-stone-100 relative z-10 flex flex-col max-h-[85dvh] sm:max-h-[85vh] overflow-hidden transform transition-all duration-300 scale-100">
+            {/* Header Title Grid Layer — Fixed Height */}
+            <div className="flex items-center justify-between pb-4 border-b border-stone-200 shrink-0">
+              <div className="flex items-center gap-2">
+                <Camera size={18} className="text-[#7A1C1C]" />
+                <h3 className="text-lg font-serif text-[#7A1C1C] font-bold tracking-wide">
+                  Contribute Media Frame
+                </h3>
               </div>
-              <span className="text-xs font-semibold text-stone-600">Select Image Asset</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleFileSelection} />
-            </label>
-          </div>
-
-          {uploadPreview && (
-            <div className="border border-[#E6DED2] rounded-2xl overflow-hidden p-1 bg-white shadow-sm ring-1 ring-stone-100">
-              <div className="relative w-full h-44 rounded-xl overflow-hidden bg-stone-50 flex items-center justify-center">
-                <Image src={uploadPreview} alt="Upload Target Workspace Preview" fill className="object-cover" unoptimized />
-              </div>
+              <button
+                onClick={() => setIsUploadModalOpen(false)}
+                disabled={uploading}
+                className="text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-all p-1.5 rounded-full disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <X size={18} />
+              </button>
             </div>
-          )}
 
-          <div className="space-y-1.5">
-            <label className="text-stone-500 font-bold uppercase tracking-wide text-[10px]">Frame Story Description</label>
-            <textarea 
-              rows={3}
-              placeholder="Provide details about the location, contextual story, or individuals present in this memory record..."
-              value={uploadForm.description}
-              onChange={(e) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-4 py-3 rounded-xl bg-[#FCFBF8] border border-[#E6DED2] text-stone-800 placeholder-stone-400 focus:outline-none focus:border-stone-400 focus:ring-1 focus:ring-stone-400 transition-all text-sm resize-none font-medium leading-relaxed" 
-              required
-            />
+            {/* Scrollable Context Fields Input Block */}
+            <form
+              className="flex-1 flex flex-col min-h-0 pt-4"
+              onSubmit={handleUploadSubmit}
+            >
+              {/* Scrollable Form Body */}
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 pb-4 scrollbar-thin text-left">
+                <div className="space-y-1.5">
+                  <label className="text-stone-500 font-bold uppercase tracking-wide text-[10px]">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Service in Kano, 1982"
+                    value={uploadForm.title}
+                    onChange={(e) =>
+                      setUploadForm((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    disabled={uploading}
+                    className="w-full px-4 py-3 rounded-xl bg-[#FCFBF8] border border-[#E6DED2] text-stone-800 focus:outline-none focus:border-stone-400 focus:ring-1 focus:ring-stone-400 transition-all text-sm disabled:opacity-60"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-stone-500 font-bold uppercase tracking-wide text-[10px]">
+                    Categories
+                  </label>
+                  <select
+                    value={uploadForm.category}
+                    onChange={(e) =>
+                      setUploadForm((prev) => ({
+                        ...prev,
+                        category: e.target.value,
+                      }))
+                    }
+                    disabled={uploading}
+                    className="w-full px-4 py-3 rounded-xl bg-[#FCFBF8] border border-[#E6DED2] text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-400 text-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23706E6B%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_auto] bg-[right_16px_center] bg-no-repeat disabled:opacity-60"
+                    required
+                  >
+                    <option value="Family">Family</option>
+                    <option value="Friends">Friends</option>
+                    <option value="Work">Work</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-stone-500 font-bold uppercase tracking-wide text-[10px]">
+                    Media File Attachment
+                  </label>
+                  <label className="flex flex-col items-center justify-center gap-2 py-6 border-2 border-dashed border-[#E6DED2] hover:border-[#D4AF37] rounded-2xl cursor-pointer bg-[#FCFBF8] transition-all group">
+                    <div className="flex gap-2 text-stone-400 group-hover:text-[#7A1C1C] transition-colors">
+                      <Camera size={18} />
+                    </div>
+                    <span className="text-xs font-semibold text-stone-600">
+                      {uploadForm.mediaFile
+                        ? uploadForm.mediaFile.name
+                        : "Select Image Asset"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileSelection}
+                      disabled={uploading}
+                    />
+                  </label>
+                </div>
+
+                {uploadPreview && (
+                  <div className="border border-[#E6DED2] rounded-2xl overflow-hidden p-1 bg-white shadow-sm ring-1 ring-stone-100">
+                    <div className="relative w-full h-44 rounded-xl overflow-hidden bg-stone-50 flex items-center justify-center">
+                      <Image
+                        src={uploadPreview}
+                        alt="Upload Target Workspace Preview"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-stone-500 font-bold uppercase tracking-wide text-[10px]">
+                    Frame Story Description
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Provide details about the location, contextual story, or individuals present in this memory record..."
+                    value={uploadForm.description}
+                    onChange={(e) =>
+                      setUploadForm((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    disabled={uploading}
+                    className="w-full px-4 py-3 rounded-xl bg-[#FCFBF8] border border-[#E6DED2] text-stone-800 placeholder-stone-400 focus:outline-none focus:border-stone-400 focus:ring-1 focus:ring-stone-400 transition-all text-sm resize-none font-medium leading-relaxed disabled:opacity-60"
+                    required
+                  />
+                </div>
+
+                {uploadError && (
+                  <p className="text-xs text-red-600 font-medium">
+                    {uploadError}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Button Area — Anchored securely at the bottom */}
+              <div className="pt-2 border-t border-stone-100 shrink-0 bg-white">
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="w-full bg-[#7A1C1C] text-white text-xs font-bold py-4 rounded-xl uppercase tracking-widest hover:bg-[#5C1313] transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {uploading && <Loader2 size={14} className="animate-spin" />}
+                  {uploading ? "Uploading..." : "Upload Image to Gallery"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-
-        {/* Action Button Area — Anchored securely at the bottom */}
-        <div className="pt-2 border-t border-stone-100 shrink-0 bg-white">
-          <button 
-            type="submit" 
-            className="w-full bg-[#7A1C1C] text-white text-xs font-bold py-4 rounded-xl uppercase tracking-widest hover:bg-[#5C1313] transition-colors shadow-md"
-          >
-            Upload Image to Gallery
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 }

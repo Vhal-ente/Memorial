@@ -1,23 +1,26 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Search,
   PlusCircle,
   ShieldCheck,
   XCircle,
   MessageSquare,
-  ThumbsUp,
-  X,
   ImageIcon,
 } from "lucide-react";
 
 import TributeManagement from "./components/TributeManagement";
 import GalleryManagement from "./components/GalleryManagement";
 import EmailBroadcastCenter from "./components/EmailBroadcastCenter";
+import { getAdminImages, deleteImage, restoreImage } from "@/lib/api/gallery";
+import {
+  getAdminTributes,
+  approveTribute,
+  rejectTribute,
+} from "@/lib/api/tribute";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +29,13 @@ export const dynamic = "force-dynamic";
 interface TributeRequest {
   id: string;
   name: string;
-  tribute: string;
-}
-
-interface MemorialRequest {
-  id: string;
-  name: string;
-  quote: string;
+  relation: string;
+  message: string;
+  date: string;
+  timeAgo: string;
+  attachmentUrl: string;
+  initials: string;
+  status: "pending" | "approved" | "rejected";
 }
 
 interface ImageRequest {
@@ -44,67 +47,88 @@ interface ImageRequest {
   imageSrc: string | null;
 }
 
-// ─── Mock data (replace with real API calls) ──────────────────────────────────
-
-const MOCK_TRIBUTE: TributeRequest = {
-  id: "tribute-1",
-  name: "Samuel Higgins",
-  tribute: "A wonderful soul who will be missed by all...",
-};
-
-const MOCK_MEMORIAL: MemorialRequest = {
-  id: "memorial-1",
-  name: "Memorial for Eleanor Sterling",
-  quote: "A legacy of kindness and grace...",
-};
-
-const INITIAL_IMAGE_REQUESTS: ImageRequest[] = [
-  {
-    id: "img-1",
-    title: "Portrait of Eleanor Sterling",
-    category: "Memorial Gallery",
-    uploader: "James Sterling",
-    status: "Pending",
-    imageSrc: "/eleanor-portrait.jpg",
-  },
-  {
-    id: "img-2",
-    title: "Family Gathering 1985",
-    category: "Archive Update",
-    uploader: "Sarah Chen",
-    status: "Review Required",
-    imageSrc: null,
-  },
-];
-
 // ─── Sub-view switcher ────────────────────────────────────────────────────────
 
 function DashboardContent() {
   const searchParams = useSearchParams();
   const currentView = searchParams.get("view");
-  const [imageRequests, setImageRequests] = useState<ImageRequest[]>(INITIAL_IMAGE_REQUESTS);
 
-  // TODO: replace with real API calls
-  const handleApproveImage = (id: string) => {
-    setImageRequests((prev) => prev.filter((r) => r.id !== id));
+  const [tributes, setTributes] = useState<TributeRequest[]>([]);
+  const [images, setImages] = useState<ImageRequest[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+  const loadDashboard = async () => {
+    setLoading(true);
+
+    try {
+      const [tributeRes, imageRes] = await Promise.all([
+        getAdminTributes(2, 0),
+        getAdminImages(2, 0),
+      ]);
+
+      if (tributeRes.success) {
+        setTributes(
+          tributeRes.tributes
+            .filter((t: any) => t.status === "pending")
+            .slice(0, 2)
+        );
+      }
+
+      if (imageRes.success) {
+        setImages(
+          imageRes.data
+            .filter((i: any) => i.isDeleted)
+            .slice(0, 2)
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRejectImage = (id: string) => {
-    setImageRequests((prev) => prev.filter((r) => r.id !== id));
+  loadDashboard();
+}, []);
+  const handleApproveImage = async (id: string) => {
+    try {
+      await restoreImage(Number(id));
+      setImages((prev) => prev.filter((i) => String(i.id) !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleApproveTribute = (_id: string) => {
-    // TODO: call API
+  const handleRejectImage = async (id: string) => {
+    try {
+      await deleteImage(Number(id));
+      setImages((prev) => prev.filter((i) => String(i.id) !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleApproveMemorial = (_id: string) => {
-    // TODO: call API
+  const handleApproveTribute = async (id: string) => {
+    try {
+      await approveTribute(Number(id));
+      setTributes((prev) => prev.filter((t) => String(t.id) !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // Sub-view routing — no `dashboard` case to avoid circular render
+  const handleRejectTribute = async (id: string) => {
+    try {
+      await rejectTribute(Number(id));
+      setTributes((prev) => prev.filter((t) => String(t.id) !== id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Sub-view routing
   if (currentView === "tributes") return <TributeManagement />;
-  if (currentView === "gallery")  return <GalleryManagement />;
-  // if (currentView === "emails")   return <EmailBroadcastCenter />;
+  if (currentView === "gallery") return <GalleryManagement />;
+  if (currentView === "emails") return <EmailBroadcastCenter />;
 
   // ── Default overview ──
   return (
@@ -138,7 +162,6 @@ function DashboardContent() {
           >
             Tribute Queue
           </h3>
-          {/* Replace 12 with a real count from your API */}
           <Link
             href="/admin/dashboard?view=tributes"
             className="text-xs font-medium text-[#C99D5A] hover:underline"
@@ -147,36 +170,43 @@ function DashboardContent() {
           </Link>
         </div>
 
-        <div className="bg-white border border-[#E6DED2] rounded-2xl p-6 shadow-sm flex items-center gap-6">
-          <div className="w-12 h-12 rounded-full bg-[#FAF8F5] border border-[#E6DED2] flex items-center justify-center text-[#7A1C1C] shrink-0">
-            <ShieldCheck size={22} aria-hidden />
+        {loading ? (
+          <p className="text-sm text-stone-400 italic">Loading tributes…</p>
+        ) : tributes.length === 0 ? (
+          <p className="text-sm text-stone-400 italic">No pending tributes.</p>
+        ) : (
+          <div className="bg-white border border-[#E6DED2] rounded-2xl p-6 shadow-sm flex items-center gap-6">
+            <div className="w-12 h-12 rounded-full bg-[#FAF8F5] border border-[#E6DED2] flex items-center justify-center text-[#7A1C1C] shrink-0">
+              <ShieldCheck size={22} aria-hidden />
+            </div>
+            <div className="flex-1 space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold text-stone-950 truncate">
+                New tribute for {tributes[0]?.name ?? "Unknown"}
+              </p>
+              <p className="text-xs italic text-stone-500 font-medium truncate">
+                {tributes[0]?.message}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleApproveTribute(tributes[0].id)}
+                className="px-5 py-2.5 bg-[#7A1C1C] rounded-xl text-xs font-semibold text-white hover:bg-[#681818] transition-colors flex items-center gap-2"
+              >
+                <ShieldCheck size={15} aria-hidden />
+                Approve
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRejectTribute(tributes[0].id)}
+                className="px-5 py-2.5 border border-[#E6DED2] rounded-xl text-xs font-semibold text-stone-700 hover:bg-[#FAF8F5] transition-colors flex items-center gap-2"
+              >
+                <XCircle size={15} aria-hidden />
+                Reject
+              </button>
+            </div>
           </div>
-          <div className="flex-1 space-y-0.5 min-w-0">
-            <p className="text-sm font-semibold text-stone-950 truncate">
-              New tribute for &ldquo;{MOCK_TRIBUTE.name}&rdquo;
-            </p>
-            <p className="text-xs italic text-stone-500 font-medium truncate">
-              {MOCK_TRIBUTE.tribute}
-            </p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleApproveTribute(MOCK_TRIBUTE.id)}
-              className="px-5 py-2.5 bg-[#7A1C1C] rounded-xl text-xs font-semibold text-white hover:bg-[#681818] transition-colors flex items-center gap-2"
-            >
-              <ShieldCheck size={15} aria-hidden />
-              Approve
-            </button>
-            <button
-              type="button"
-              className="px-5 py-2.5 border border-[#E6DED2] rounded-xl text-xs font-semibold text-stone-700 hover:bg-[#FAF8F5] transition-colors flex items-center gap-2"
-            >
-              <XCircle size={15} aria-hidden />
-              Reject
-            </button>
-          </div>
-        </div>
+        )}
       </section>
 
       {/* Image approval */}
@@ -188,7 +218,6 @@ function DashboardContent() {
           >
             Image Approval
           </h3>
-          {/* Replace with a real total count from your API */}
           <Link
             href="/admin/dashboard?view=gallery"
             className="text-xs font-medium tracking-wider text-[#C99D5A] hover:opacity-80 hover:underline"
@@ -197,11 +226,13 @@ function DashboardContent() {
           </Link>
         </div>
 
-        {imageRequests.length === 0 ? (
+        {loading ? (
+          <p className="text-sm text-stone-400 italic">Loading images…</p>
+        ) : images.length === 0 ? (
           <p className="text-sm text-stone-400 italic">No images pending review.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {imageRequests.map((request) => (
+            {images.map((request) => (
               <article
                 key={request.id}
                 className="bg-white border border-[#EBE6DD] rounded-2xl overflow-hidden shadow-sm flex flex-col"
@@ -215,7 +246,12 @@ function DashboardContent() {
                       className="object-cover object-center grayscale contrast-110"
                     />
                   ) : (
-                    <ImageIcon size={44} strokeWidth={1.2} className="text-stone-400" aria-hidden />
+                    <ImageIcon
+                      size={44}
+                      strokeWidth={1.2}
+                      className="text-stone-400"
+                      aria-hidden
+                    />
                   )}
                   <span className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm border border-stone-200/50 text-[9px] font-bold tracking-wider px-2.5 py-1 rounded-md text-stone-500 uppercase">
                     {request.status}
@@ -287,7 +323,6 @@ function DashboardContent() {
             </select>
             <div className="p-4 bg-stone-50 border border-stone-100 rounded-xl text-xs text-stone-600 font-medium">
               Estimated reach:{" "}
-              {/* Replace with real count from your API */}
               <strong className="text-stone-800">4,289 recipients</strong>
             </div>
           </div>
@@ -317,73 +352,6 @@ function DashboardContent() {
           </div>
         </div>
       </section>
-
-      {/* Pending approvals */}
-      {/* Lists all the pending approvals on the application be it tribute, image,  */}
-      <section aria-labelledby="pending-heading" className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h3
-            id="pending-heading"
-            className="text-lg font-semibold text-stone-900 font-serif"
-          >
-            Pending Approvals
-          </h3>
-          {/* Replace with real count from your API */}
-          <Link href="#" className="text-xs font-medium text-[#C99D5A] hover:underline">
-            View all
-          </Link>
-        </div>
-
-        <div className="bg-white border border-[#E6DED2] rounded-2xl p-6 shadow-sm grid grid-cols-[1fr,1.5fr] gap-6 items-center">
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 bg-stone-100 rounded-2xl border border-stone-200 shrink-0 flex items-center justify-center text-stone-400">
-              <ImageIcon size={28} strokeWidth={1.2} aria-hidden />
-            </div>
-            <div className="space-y-1 min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[#C99D5A]">
-                New Memorial Request
-              </p>
-              <p className="text-sm font-semibold text-stone-950 truncate">
-                {MOCK_MEMORIAL.name}
-              </p>
-              <p className="text-xs italic text-stone-500 font-medium line-clamp-2">
-                {MOCK_MEMORIAL.quote}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pl-6 border-l border-stone-100">
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => handleApproveMemorial(MOCK_MEMORIAL.id)}
-                className="text-xs font-medium text-[#7A1C1C] hover:underline flex items-center gap-1.5"
-              >
-                <ThumbsUp size={14} aria-hidden />
-                Approve
-              </button>
-              <button
-                type="button"
-                className="text-xs font-medium text-stone-600 hover:underline flex items-center gap-1.5"
-              >
-                <Search size={14} aria-hidden />
-                Review
-              </button>
-              <button
-                type="button"
-                className="text-xs font-medium text-red-500 hover:underline flex items-center gap-1.5"
-              >
-                <X size={14} aria-hidden />
-                Reject
-              </button>
-            </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-stone-400 px-3 py-1.5 rounded-full border border-stone-100 bg-stone-50">
-              Pending Review
-            </span>
-          </div>
-        </div>
-      </section>
-
     </div>
   );
 }

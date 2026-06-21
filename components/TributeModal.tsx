@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from "react";
-import Image from "next/image";
-import { X, Camera, Flame } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { Editor } from "@/components/TextEditor";
+import { api } from "@/lib/api/axios";
 
 interface CreateTributeModalProps {
   isOpen: boolean;
@@ -33,8 +33,9 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
     captchaToken: "",
   });
 
-  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   // Clear modal fields completely upon closing out
@@ -48,8 +49,8 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
           message: "",
           captchaToken: "",
         });
-        setMediaPreview(null);
-        setMediaType(null);
+        setAttachedFiles([]);
+        setSubmitError(null);
       });
     }
   }, [isOpen, startTransition]);
@@ -57,7 +58,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
   if (!isOpen) return null;
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -67,27 +68,72 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
     setFormData((prev) => ({ ...prev, message: markdownOutput }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.message || formData.message.trim() === "") {
-      alert("Please write a tribute message");
+      setSubmitError("Please write a tribute message");
       return;
     }
 
     if (!formData.captchaToken) {
-      alert("Please complete the verification");
+      setSubmitError("Please complete the verification");
       return;
     }
 
-    onSubmit(formData);
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+
+      const payload = new FormData();
+      payload.append("authorName", formData.fullName);
+      payload.append("title", `Tribute from ${formData.fullName}`);
+      payload.append("message", formData.message);
+      payload.append("relationship", formData.relationship);
+      payload.append("email", formData.email);
+
+      // The API accepts a single attachment; the editor allows attaching
+      // multiple files, so only the first is sent.
+      if (attachedFiles.length > 0) {
+        payload.append("file", attachedFiles[0]);
+      }
+
+      const { data } = await api.post("/api/tribute", payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (data.success) {
+        onSubmit({
+          fullName: formData.fullName,
+          message: formData.message,
+          relationship: formData.relationship,
+          email: formData.email,
+          captchaToken: formData.captchaToken,
+        });
+        onClose();
+      } else {
+        setSubmitError(data.message || "Failed to submit tribute");
+      }
+    } catch (error: any) {
+      setSubmitError(
+        error?.response?.data?.message ||
+          "Something went wrong submitting your tribute. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center pt-9 sm:items-center justify-center bg-black/50 backdrop-blur-md p-0 sm:p-4 animate-fade-in">
       {/* Absolute background click wrapper safely nested below the modal target */}
-      <div className="absolute inset-0" onClick={onClose} />
-      
+      <div
+        className="absolute inset-0"
+        onClick={submitting ? undefined : onClose}
+      />
+
       <div
         role="dialog"
         aria-modal="true"
@@ -123,7 +169,8 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-stone-100 transition-colors shrink-0"
+            disabled={submitting}
+            className="p-2 rounded-full hover:bg-stone-100 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label="Close dialog"
           >
             <X size={18} className="text-stone-400" />
@@ -145,6 +192,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
               value={formData.fullName}
               onChange={handleInputChange}
               placeholder="Enter your full name"
+              disabled={submitting}
               className="
                 w-full
                 h-11
@@ -161,6 +209,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
                 focus:ring-1
                 focus:ring-[#D4AF37]
                 transition-all
+                disabled:opacity-60
               "
               required
             />
@@ -177,6 +226,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Enter your email address"
+              disabled={submitting}
               className="
                 w-full
                 h-11
@@ -193,6 +243,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
                 focus:ring-1
                 focus:ring-[#D4AF37]
                 transition-all
+                disabled:opacity-60
               "
               required
             />
@@ -207,6 +258,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
               name="relationship"
               value={formData.relationship}
               onChange={handleInputChange}
+              disabled={submitting}
               className="
                 w-full 
                 h-11 
@@ -228,6 +280,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
                 bg-[length:10px_auto] 
                 bg-[right_16px_center] 
                 bg-no-repeat
+                disabled:opacity-60
               "
               required
             >
@@ -240,7 +293,8 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
             </select>
           </div>
 
-          {/* Text Editor Container */}
+          {/* Text Editor Container — handles its own file attachments
+              (drag & drop, attach button, previews) via onFilesChange */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold tracking-wide text-stone-500 uppercase">
               Tribute Message
@@ -249,8 +303,15 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
               <Editor
                 value={formData.message}
                 onChange={handleEditorChange}
+                onFilesChange={setAttachedFiles}
               />
             </div>
+            {attachedFiles.length > 1 && (
+              <p className="text-[10px] text-stone-400">
+                Only the first attachment ({attachedFiles[0].name}) will be
+                submitted with your tribute.
+              </p>
+            )}
           </div>
 
           {/* Verification Engine Track */}
@@ -272,10 +333,17 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
             />
           </div>
 
+          {submitError && (
+            <p className="text-xs text-center text-red-600 font-medium px-2">
+              {submitError}
+            </p>
+          )}
+
           {/* Submission Stack block */}
           <div className="space-y-3 pt-2 shrink-0">
             <button
               type="submit"
+              disabled={submitting}
               className="
                 w-full
                 h-12
@@ -290,13 +358,22 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
                 shadow-md
                 transition-all
                 active:scale-[0.99]
+                disabled:opacity-60
+                disabled:cursor-not-allowed
+                disabled:active:scale-100
+                flex
+                items-center
+                justify-center
+                gap-2
               "
             >
-              Share Memorial Tribute
+              {submitting && <Loader2 size={14} className="animate-spin" />}
+              {submitting ? "Submitting..." : "Share Memorial Tribute"}
             </button>
 
             <p className="text-[10px] text-center text-stone-400 font-medium px-4 leading-normal">
-              Your tribute will be reviewed before appearing in the public sanctuary.
+              Your tribute will be reviewed before appearing in the public
+              sanctuary.
             </p>
           </div>
         </form>
