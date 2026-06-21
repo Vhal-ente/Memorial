@@ -316,7 +316,7 @@ export default function MediaGalleryView() {
                 >
                   <div className="relative w-full h-full rounded-[20px] overflow-hidden">
                     <Image
-                      src={assetUrl(item.mediumUrl)}
+                      src={assetUrl(item.originalUrl)}
                       alt={item.title}
                       fill
                       sizes="(max-width: 768px) 100vw, 380px"
@@ -338,7 +338,7 @@ export default function MediaGalleryView() {
               >
                 <div className="relative w-full h-full rounded-[20px] overflow-hidden">
                   <Image
-                    src={assetUrl(item.mediumUrl)}
+                    src={assetUrl(item.originalUrl)}
                     alt={item.title}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
@@ -367,52 +367,6 @@ export default function MediaGalleryView() {
             </button>
           </div>
         )}
-
-      {/* 4. Curated Folder Collections Section Block */}
-      {/* <div className="border-t border-[#E6DED2] pt-12 sm:pt-16">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 text-xs font-semibold tracking-widest text-[#D4AF37] uppercase">
-              <FolderOpen size={14} /> Catalog Index
-            </div>
-            <h3 className="text-xl sm:text-2xl font-serif text-[#7A1C1C] font-bold tracking-wide">
-              Curated Collections
-            </h3>
-            <p className="text-xs text-stone-500 font-medium">
-              Historical memory nodes locked safe within ancestral groupings.
-            </p>
-          </div>
-          <button className="text-[11px] font-bold tracking-widest uppercase text-[#7A1C1C] hover:text-[#5C1313] transition-colors pb-1 border-b-2 border-[#D4AF37] self-start sm:self-auto">
-            See All Records →
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
-          {albumFolders.map((album, index) => (
-            <div key={index} className="group cursor-pointer space-y-4">
-              <div className="relative h-52 sm:h-64 rounded-3xl overflow-hidden bg-white border border-stone-200/50 shadow-sm p-1">
-                <div className="relative w-full h-full rounded-[20px] overflow-hidden">
-                  <Image
-                    src={album.cover}
-                    alt={album.title}
-                    fill
-                    sizes="(max-width: 640px) 100vw, 560px"
-                    className="object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                  />
-                </div>
-              </div>
-              <div className="pl-1 space-y-0.5">
-                <h4 className="font-serif text-lg text-[#7A1C1C] font-bold tracking-wide group-hover:text-[#991B1B] transition-colors">
-                  {album.title}
-                </h4>
-                <p className="text-xs text-stone-500 font-semibold tracking-wide">
-                  {album.count}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div> */}
 
       {/* 5. Lightbox Viewport Details Modal */}
       {selectedMedia && (
