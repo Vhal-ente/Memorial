@@ -47,66 +47,57 @@ export default function TributesPage() {
   const [hasMore, setHasMore] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  
 
-  const loadTributes = useCallback(
-    async (cursor: number, isInitial: boolean) => {
-      try {
-        isInitial ? setLoading(true) : setLoadingMore(true);
+ const loadTributes = useCallback(async (cursor: number, isInitial: boolean) => {
+  try {
+    isInitial ? setLoading(true) : setLoadingMore(true);
 
-        const { data } = await api.get(
-          `/api/tribute?limit=${PAGE_SIZE}`,
-        );
+    const { data } = await api.get(
+      `/api/tribute?limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ""}`
+    );
 
-        if (data.success) {
-          const newTributes: Tribute[] = data.tributes || [];
-
-          setTributes((prev) =>
-            isInitial ? newTributes : [...prev, ...newTributes],
-          );
-          setHasMore(newTributes.length === PAGE_SIZE);
-        }
-      } catch (error) {
-        console.error("Error fetching tributes:", error);
-      } finally {
-        isInitial ? setLoading(false) : setLoadingMore(false);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchInitial() {
-      try {
-        setLoading(true);
-
-        const { data } = await api.get(
-          `/api/tribute?limit=${PAGE_SIZE}`,
-        );
-
-        if (!cancelled && data.success) {
-          const newTributes: Tribute[] = data.tributes || [];
-          setTributes(newTributes);
-          setHasMore(newTributes.length === PAGE_SIZE);
-        }
-      } catch (error) {
-        if (!cancelled) console.error("Error fetching tributes:", error);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (data.success) {
+      const newTributes: Tribute[] = data.tributes || [];
+      setTributes((prev) => isInitial ? newTributes : [...prev, ...newTributes]);
+      setHasMore(newTributes.length === PAGE_SIZE);
     }
+  } catch (error) {
+    console.error("Error fetching tributes:", error);
+  } finally {
+    isInitial ? setLoading(false) : setLoadingMore(false);
+  }
+}, []);
 
-    fetchInitial();
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
-  const handleLoadMore = () => {
+useEffect(() => {
+  let cancelled = false;
+
+  (async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/api/tribute?limit=${PAGE_SIZE}`);
+      if (!cancelled && data.success) {
+        const newTributes: Tribute[] = data.tributes || [];
+        setTributes(newTributes);
+        setHasMore(newTributes.length === PAGE_SIZE);
+      }
+    } catch (error) {
+      if (!cancelled) console.error("Error fetching tributes:", error);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  })();
+
+  return () => { cancelled = true; };
+}, []);
+
+ const handleLoadMore = () => {
+  if (hasMore && !loadingMore) {
     loadTributes(tributes.length, false);
-  };
+  }
+};
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
