@@ -12,6 +12,7 @@ interface Tribute {
   authorName: string;
   relationship: string;
   email: string;
+  phoneNumber: string;
   attachmentUrl?: string;
   attachmentType?: string;
   status: string;
@@ -21,6 +22,7 @@ interface Tribute {
 interface TributeFormFields {
   fullName: string;
   email: string;
+  phoneNumber: string;
   relationship: string;
   message: string;
 }
@@ -30,6 +32,7 @@ const PAGE_SIZE = 20;
 const EMPTY_FORM: TributeFormFields = {
   fullName: "",
   email: "",
+  phoneNumber: "",
   relationship: "",
   message: "",
 };
@@ -51,7 +54,7 @@ export default function TributesPage() {
         isInitial ? setLoading(true) : setLoadingMore(true);
 
         const { data } = await api.get(
-          `/api/tribute?limit=${PAGE_SIZE}&cursor=${cursor}`,
+          `/api/tribute?limit=${PAGE_SIZE}`,
         );
 
         if (data.success) {
@@ -79,7 +82,7 @@ export default function TributesPage() {
         setLoading(true);
 
         const { data } = await api.get(
-          `/api/tribute?limit=${PAGE_SIZE}&cursor=0`,
+          `/api/tribute?limit=${PAGE_SIZE}`,
         );
 
         if (!cancelled && data.success) {
@@ -135,6 +138,7 @@ export default function TributesPage() {
       payload.append("message", formData.message);
       payload.append("relationship", formData.relationship);
       payload.append("email", formData.email);
+      payload.append("phoneNumber", formData.phoneNumber)
 
       // The API accepts a single attachment; the editor allows attaching
       // multiple files, so only the first is sent.
@@ -262,7 +266,7 @@ export default function TributesPage() {
                   <div className="relative w-full sm:w-64 h-44 sm:h-36 rounded-xl overflow-hidden shadow-sm my-2 p-1 bg-white ring-1 ring-[#E6DED2]">
                     <div className="relative w-full h-full rounded-lg overflow-hidden">
                       <Image
-                        src={`${process.env.NEXT_PUBLIC_API_URL ?? ""}${tribute.attachmentUrl}`}
+                        src={`${process.env.NEXT_PUBLIC_API_URL ?? ""}/uploads${tribute.attachmentUrl}`}
                         alt={tribute.title || "Tribute Image"}
                         fill
                         sizes="(max-width: 640px) 100vw, 256px"
@@ -340,6 +344,22 @@ export default function TributesPage() {
                   required
                 />
               </div>
+
+              <div className="space-y-1.5">
+                <label className="text-stone-500 font-semibold uppercase tracking-wide text-[10px]">
+                 Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  placeholder="Enter your phone Number"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  disabled={submitting}
+                  className="w-full p-3 rounded-xl bg-[#FCFBF8] border border-[#E6DED2] text-stone-800 font-medium placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] disabled:opacity-60"
+                  required
+                />   
+                </div>           
 
               <div className="space-y-1.5">
                 <label className="text-stone-500 font-semibold uppercase tracking-wide text-[10px]">
