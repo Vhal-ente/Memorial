@@ -479,12 +479,6 @@ export default function MediaGalleryView() {
               </div>
 
               <div className="flex items-center gap-3 pt-4 border-t border-stone-100">
-                <button
-                  onClick={() => setSelectedMedia(null)}
-                  className="flex-1 bg-[#7A1C1C] hover:bg-[#5C1313] text-white text-xs font-bold py-4 px-4 rounded-xl uppercase tracking-wider transition-colors text-center shadow-md flex items-center justify-center gap-1.5"
-                >
-                  Enlarge Workspace
-                </button>
                 <a
                   href={assetUrl(selectedMedia.originalUrl)}
                   download
