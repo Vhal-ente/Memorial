@@ -29,6 +29,7 @@ export const dynamic = "force-dynamic";
 interface TributeRequest {
   id: string;
   name: string;
+  authorName: string;
   relation: string;
   message: string;
   date: string;
@@ -188,7 +189,7 @@ function DashboardContent() {
             </div>
             <div className="flex-1 space-y-0.5 min-w-0">
               <p className="text-sm font-semibold text-stone-950 truncate">
-                New tribute for {tributes[0]?.name ?? "Unknown"}
+                New tribute for {tributes[0]?.authorName ?? "Unknown"}
               </p>
               <p className="text-xs italic text-stone-500 font-medium truncate">
                 {tributes[0]?.message}

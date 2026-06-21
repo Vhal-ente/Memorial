@@ -362,7 +362,7 @@ export default function MediaGalleryView() {
               type="button"
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="..."
+              className="text-gray-400"
             >
               {loadingMore ? "Loading..." : "Load More Frames"}
             </button>
