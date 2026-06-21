@@ -71,19 +71,6 @@ export default function MediaGalleryView() {
 
   const [hasMore, setHasMore] = useState(true);
 
-  const albumFolders = [
-    {
-      title: "The Oguegbu Family Archive",
-      count: "241 Items Included",
-      cover: "/images/gallery/album-traditional.jpg",
-    },
-    {
-      title: "Nigeria Immigration Service Years",
-      count: "82 Historical Records",
-      cover: "/images/gallery/album-service.jpg",
-    },
-  ];
-
   const loadImages = useCallback(async (cursor: number, isInitial: boolean) => {
     try {
       isInitial ? setLoading(true) : setLoadingMore(true);
@@ -316,7 +303,7 @@ export default function MediaGalleryView() {
       )}
 
       {!loading && filteredMedia.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-start">
+        <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 sm:gap-6 space-y-5 sm:space-y-6 items-start">
           {/* Left Column Stack Box Wrapper */}
           <div className="md:col-span-1 space-y-5 sm:space-y-6">
             {filteredMedia
@@ -342,7 +329,7 @@ export default function MediaGalleryView() {
           </div>
 
           {/* Right 2-Column Split Mesh Layout */}
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+          <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-2 gap-5 sm:gap-6">
             {filteredMedia.slice(1).map((item, i) => (
               <div
                 key={item.id}
