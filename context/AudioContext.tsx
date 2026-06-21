@@ -15,8 +15,9 @@ interface AudioContextType {
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
-// Module-level singleton — survives React unmounts / route changes
+// Module-level singletons — survive React unmounts / route changes
 let globalAudio: HTMLAudioElement | null = null;
+let userPaused = false;
 
 function getOrCreateAudio(): HTMLAudioElement {
   if (!globalAudio) {
@@ -32,7 +33,6 @@ function getOrCreateAudio(): HTMLAudioElement {
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // Initialise directly from the singleton so no setState call is needed in the effect
   const [isPlaying, setIsPlaying] = useState(() => {
     if (typeof window === "undefined") return false;
     return !getOrCreateAudio().paused;
@@ -45,6 +45,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const attemptAutoplay = () => {
       if (!audio.paused) return;
+      if (userPaused) return; // 👈 respect user's intent
 
       audio
         .play()
@@ -68,7 +69,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
     window.addEventListener("touchstart", attemptAutoplay);
     window.addEventListener("keydown", attemptAutoplay);
 
-    // Let audio events drive all state updates — no direct setState in effect body
     const handlePause = () => {
       setIsPlaying(false);
       isPlayingRef.current = false;
@@ -91,9 +91,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
   const togglePlayback = () => {
     const audio = getOrCreateAudio();
     if (!audio.paused) {
-      audio.pause(); // triggers "pause" event → setIsPlaying(false)
+      userPaused = true;  // 👈 user explicitly paused
+      audio.pause();
     } else {
-      audio.play().catch((err) => console.log("Playback error:", err)); // triggers "play" event → setIsPlaying(true)
+      userPaused = false; // 👈 user explicitly resumed
+      audio.play().catch((err) => console.log("Playback error:", err));
     }
   };
 

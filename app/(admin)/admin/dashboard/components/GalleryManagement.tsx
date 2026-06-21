@@ -44,7 +44,7 @@ const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
     return items.map((item) => {
-      const path = item.mediumUrl || item.thumbUrl || item.originalUrl || "";
+      const path = item.originalUrl || "";
 
       return {
         id: String(item.id),
@@ -60,43 +60,64 @@ const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     });
   };
 
-  const fetchImages = async (nextCursor: number, append: boolean) => {
+ const fetchImages = async (nextCursor: number, append: boolean) => {
+  setLoading(true);
+  try {
+    const data = await getAdminImages(20, nextCursor);
+    if (!data.success) return;
+
+    const mapped = mapApiToUi(data.data || []);
+
+    // Disable button if no items came back OR no nextCursor
+    if (!mapped.length || data.nextCursor === null || data.nextCursor === undefined) {
+      setCursor(null); // 👈 disables the button
+    } else {
+      setCursor(data.nextCursor);
+    }
+
+    setMediaItems((prev) => {
+      if (!append) return mapped;
+      const existingIds = new Set(prev.map((item) => item.id));
+      const newItems = mapped.filter((item) => !existingIds.has(item.id));
+      return [...prev, ...newItems];
+    });
+
+  } finally {
+    setLoading(false);
+  }
+};
+
+ useEffect(() => {
+  let ignore = false;
+  const run = async () => {
     setLoading(true);
     try {
-      const data = await getAdminImages(20, nextCursor);
-      if (!data.success) return;
+      const data = await getAdminImages(20, 0);
+      if (ignore || !data.success) return;
       const mapped = mapApiToUi(data.data || []);
-      setMediaItems((prev) => (append ? [...prev, ...mapped] : mapped));
-      setCursor(data.nextCursor);
+      setMediaItems(mapped);
+
+      // Disable button if no nextCursor or empty data
+      if (!mapped.length || data.nextCursor === null || data.nextCursor === undefined) {
+        setCursor(null);
+      } else {
+        setCursor(data.nextCursor);
+      }
     } finally {
-      setLoading(false);
+      if (!ignore) setLoading(false);
     }
   };
-
-  useEffect(() => {
-    let ignore = false;
-    const run = async () => {
-      setLoading(true);
-      try {
-        const data = await getAdminImages(20, 0);
-        if (ignore || !data.success) return;
-        const mapped = mapApiToUi(data.data || []);
-        setMediaItems(mapped);
-        setCursor(data.nextCursor);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
-    run();
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const loadMore = () => {
-    if (cursor === null) return;
-    fetchImages(cursor, true);
+  run();
+  return () => {
+    ignore = true;
   };
+}, []);
+
+
+const loadMore = () => {
+  if (cursor === null || loading) return; 
+  fetchImages(cursor, true);
+};
 
   const handleAction = async (id: string, action: string) => {
     const numericId = Number(id);
@@ -347,7 +368,7 @@ const cancelDelete = () => {
           disabled={loading || cursor === null}
           className="px-6 py-2.5 border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-bold uppercase tracking-wider rounded shadow-sm disabled:opacity-50 transition-colors"
         >
-          {loading ? "Loading..." : "Load More Submissions"}
+          {loading ? "Loading..." : "Load More"}
         </button>
 
         <span className="text-[11px] text-stone-400 font-medium uppercase tracking-wider">
