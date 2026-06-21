@@ -40,7 +40,7 @@ const TILE_HEIGHTS = [
 
 function assetUrl(path?: string) {
   if (!path) return "";
-  return `${process.env.NEXT_PUBLIC_API_URL ?? ""}${path}`;
+  return `${process.env.NEXT_PUBLIC_API_URL ?? ""}/uploads${path}`;
 }
 
 export default function MediaGalleryView() {
@@ -90,7 +90,7 @@ export default function MediaGalleryView() {
         isInitial ? setLoading(true) : setLoadingMore(true);
 
         const { data } = await api.get(
-          `/api/images/all?limit=${PAGE_SIZE}&cursor=${cursor}`,
+          `/api/images/all?limit=${PAGE_SIZE}`,
         );
 
         if (data.success) {
@@ -122,7 +122,7 @@ export default function MediaGalleryView() {
         setLoading(true);
 
         const { data } = await api.get(
-          `/api/images/all?limit=${PAGE_SIZE}&cursor=0`,
+          `/api/images/all?limit=${PAGE_SIZE}`,
         );
 
         if (!cancelled && data.success) {

@@ -15,6 +15,7 @@ interface CreateTributeModalProps {
 export interface TributeFormData {
   fullName: string;
   email: string;
+  phoneNumber: string;
   relationship: string;
   message: string;
   captchaToken: string;
@@ -28,6 +29,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
   const [formData, setFormData] = useState<TributeFormData>({
     fullName: "",
     email: "",
+    phoneNumber: "",
     relationship: "",
     message: "",
     captchaToken: "",
@@ -45,6 +47,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
         setFormData({
           fullName: "",
           email: "",
+          phoneNumber: "",
           relationship: "",
           message: "",
           captchaToken: "",
@@ -91,6 +94,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
       payload.append("message", formData.message);
       payload.append("relationship", formData.relationship);
       payload.append("email", formData.email);
+      payload.append("phoneNumber", formData.phoneNumber);
 
       // The API accepts a single attachment; the editor allows attaching
       // multiple files, so only the first is sent.
@@ -110,6 +114,7 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
           message: formData.message,
           relationship: formData.relationship,
           email: formData.email,
+          phoneNumber: formData.phoneNumber,
           captchaToken: formData.captchaToken,
         });
         onClose();
@@ -249,6 +254,40 @@ export const TributeModal: React.FC<CreateTributeModalProps> = ({
             />
           </div>
 
+          {/* Phone number Input */}
+           <div className="space-y-1">
+            <label className="block text-[10px] font-bold tracking-wide text-stone-500 uppercase">
+              Phone number
+            </label>
+            <input
+              name="phoneNumber"
+              type="tel"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              placeholder="Enter your phone Number"
+              disabled={submitting}
+              className="
+                w-full
+                h-11
+                px-4
+                text-base
+                sm:text-sm
+                border
+                border-[#E6DED2]
+                rounded-xl
+                bg-white
+                text-stone-800
+                focus:outline-none
+                focus:border-[#D4AF37]
+                focus:ring-1
+                focus:ring-[#D4AF37]
+                transition-all
+                disabled:opacity-60
+              "
+              required
+            />
+          </div>
+          
           {/* Relationship Selector */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold tracking-wide text-stone-500 uppercase">
