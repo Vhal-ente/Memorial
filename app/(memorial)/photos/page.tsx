@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api/axios";
+import { createPortal } from "react-dom";
 
 interface GalleryImage {
   id: number;
@@ -226,11 +227,11 @@ export default function MediaGalleryView() {
     }
   };
 
- const filteredMedia = images.filter((item) => {
-  if (item.isDeleted) return false; // isDeleted: true = PENDING, hide these
-  if (activeTab === "All") return true;
-  return item.category === activeTab;
-});
+  const filteredMedia = images.filter((item) => {
+    if (item.isDeleted) return false; // isDeleted: true = PENDING, hide these
+    if (activeTab === "All") return true;
+    return item.category === activeTab;
+  });
 
   return (
     <div className="space-y-12 sm:space-y-16 max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 pb-24 text-left mt-4 sm:mt-12 relative bg-[#FCFBF8] min-h-screen">
@@ -369,70 +370,75 @@ export default function MediaGalleryView() {
         )}
 
       {/* 5. Lightbox Viewport Details Modal */}
-      {selectedMedia && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+      {selectedMedia && createPortal (
+        <div className="fixed inset-0 z-50">
+          {/* Full screen backdrop */}
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 bg-stone-900/60 backdrop-blur-md"
             onClick={() => setSelectedMedia(null)}
           />
 
-          <div className="bg-white rounded-3xl overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 shadow-2xl relative border border-stone-100 max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-visible z-10 transform scale-100 transition-all duration-300">
-            <button
-              onClick={() => setSelectedMedia(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-900/10 hover:bg-[#7A1C1C] text-stone-700 hover:text-white flex items-center justify-center text-sm z-20 transition-all shadow-sm"
-            >
-              ✕
-            </button>
+          {/* Centered content */}
+          <div className="relative z-10 flex items-center justify-center w-full h-full p-4">
+            <div className="bg-white rounded-3xl overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 shadow-2xl relative border border-stone-100 max-h-[90vh] overflow-y-auto md:overflow-visible transform scale-100 transition-all duration-300">
+              <button
+                onClick={() => setSelectedMedia(null)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-900/10 hover:bg-[#7A1C1C] text-stone-700 hover:text-white flex items-center justify-center text-sm z-20 transition-all shadow-sm"
+              >
+                ✕
+              </button>
 
-            {/* Left Media Asset Panel */}
-            <div className="md:col-span-7 bg-stone-50 min-h-[280px] sm:min-h-[360px] md:h-[500px] relative flex items-center justify-center p-2 border-r border-stone-100">
-              <div className="w-full h-full relative rounded-2xl overflow-hidden">
-                <Image
-                  src={assetUrl(selectedMedia.originalUrl)}
-                  alt={selectedMedia.title}
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 768px) 100vw, 550px"
-                />
+              {/* Left Media Asset Panel */}
+              <div className="md:col-span-7 bg-stone-50 min-h-[280px] sm:min-h-[360px] md:h-[500px] relative flex items-center justify-center p-2 border-r border-stone-100">
+                <div className="w-full h-full relative rounded-2xl overflow-hidden">
+                  <Image
+                    src={assetUrl(selectedMedia.originalUrl)}
+                    alt={selectedMedia.title}
+                    fill
+                    className="object-contain"
+                    sizes="(max-width: 768px) 100vw, 550px"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Right Side metadata drawer container */}
-            <div className="md:col-span-5 p-6 sm:p-8 md:p-10 flex flex-col justify-between space-y-6 bg-white">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-sans font-bold tracking-widest text-[#7A1C1C] uppercase bg-red-50 border border-red-100 px-2.5 py-1 rounded-md">
-                    {selectedMedia.category || "Photo Node"}
-                  </span>
-                  <span className="text-xs text-stone-400 font-mono font-semibold">
-                    {new Date(selectedMedia.createdAt).toLocaleDateString()}
-                  </span>
+              {/* Right Side metadata drawer container */}
+              <div className="md:col-span-5 p-6 sm:p-8 md:p-10 flex flex-col justify-between space-y-6 bg-white">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-sans font-bold tracking-widest text-[#7A1C1C] uppercase bg-red-50 border border-red-100 px-2.5 py-1 rounded-md">
+                      {selectedMedia.category || "Photo Node"}
+                    </span>
+                    <span className="text-xs text-stone-400 font-mono font-semibold">
+                      {new Date(selectedMedia.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <h4 className="font-serif text-xl sm:text-2xl tracking-wide text-stone-800 font-bold leading-tight">
+                    {selectedMedia.title || "Archive Artifact"}
+                  </h4>
+
+                  <p className="text-sm text-stone-600 font-medium leading-relaxed font-sans max-h-36 overflow-y-auto pr-1">
+                    {selectedMedia.description ||
+                      "A preserved memory from the family archive."}
+                  </p>
                 </div>
 
-                <h4 className="font-serif text-xl sm:text-2xl tracking-wide text-stone-800 font-bold leading-tight">
-                  {selectedMedia.title || "Archive Artifact"}
-                </h4>
-
-                <p className="text-sm text-stone-600 font-medium leading-relaxed font-sans max-h-36 overflow-y-auto pr-1">
-                  {selectedMedia.description ||
-                    "A preserved memory from the family archive."}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-4 border-t border-stone-100">
-                <a
-                  href={assetUrl(selectedMedia.originalUrl)}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-600 font-semibold text-xs py-4 px-4 rounded-xl transition-all shadow-sm flex items-center gap-1"
-                >
-                  <Download size={14} /> Download
-                </a>
+                <div className="flex items-center gap-3 pt-4 border-t border-stone-100">
+                  <a
+                    href={assetUrl(selectedMedia.originalUrl)}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-600 font-semibold text-xs py-2 px-6 rounded-xl transition-all shadow-sm flex items-center gap-1"
+                  >
+                    View
+                  </a>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+         document.body
       )}
 
       {/* 6. GLOBAL DYNAMIC UPLOAD FLOATING TRIGGER BUTTON */}

@@ -45,6 +45,7 @@ interface ImageRequest {
   uploader: string;
   status: string;
   imageSrc: string | null;
+  originalUrl: string;
 }
 
 // ─── Sub-view switcher ────────────────────────────────────────────────────────
@@ -57,38 +58,52 @@ function DashboardContent() {
   const [images, setImages] = useState<ImageRequest[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // const path = item.originalUrl || "";
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
   useEffect(() => {
-  const loadDashboard = async () => {
-    setLoading(true);
+    const loadDashboard = async () => {
+      setLoading(true);
 
-    try {
-      const [tributeRes, imageRes] = await Promise.all([
-        getAdminTributes(2, 0),
-        getAdminImages(2, 0),
-      ]);
+      try {
+        const [tributeRes, imageRes] = await Promise.all([
+          getAdminTributes(2, 0),
+          getAdminImages(2, 0),
+        ]);
 
-      if (tributeRes.success) {
-        setTributes(
-          tributeRes.tributes
-            .filter((t: any) => t.status === "pending")
-            .slice(0, 2)
-        );
+        if (tributeRes.success) {
+          setTributes(
+            tributeRes.tributes
+              .filter((t: any) => t.status === "pending")
+              .slice(0, 2),
+          );
+        }
+
+        if (imageRes.success) {
+          setImages(
+            imageRes.data
+              .filter((i: any) => i.isDeleted)
+              .slice(0, 2)
+              .map((i: any) => ({
+                id: String(i.id),
+                title: i.title || "Untitled",
+                category: i.category || "",
+                uploader: i.uploadedBy || "Anonymous",
+                status: i.isDeleted ? "PENDING" : "APPROVED",
+                imageSrc: i.originalUrl
+                  ? `${API_BASE}/uploads${i.originalUrl}`
+                  : null,
+                originalUrl: i.originalUrl || "", // 👈 add this
+              })),
+          );
+        }
+      } finally {
+        setLoading(false);
       }
+    };
 
-      if (imageRes.success) {
-        setImages(
-          imageRes.data
-            .filter((i: any) => i.isDeleted)
-            .slice(0, 2)
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  loadDashboard();
-}, []);
+    loadDashboard();
+  }, []);
   const handleApproveImage = async (id: string) => {
     try {
       await restoreImage(Number(id));
@@ -133,7 +148,6 @@ function DashboardContent() {
   // ── Default overview ──
   return (
     <div className="p-10 space-y-12">
-
       {/* Header */}
       <section className="flex items-start justify-between">
         <div className="max-w-xl">
@@ -144,13 +158,6 @@ function DashboardContent() {
             Admin Dashboard
           </h2>
         </div>
-        <button
-          type="button"
-          className="px-6 py-2.5 bg-[#C99D5A] rounded-xl text-xs font-semibold text-white hover:bg-[#b88c4b] transition-colors flex items-center gap-2 shadow-sm"
-        >
-          <PlusCircle size={16} aria-hidden />
-          Create Entry
-        </button>
       </section>
 
       {/* Tribute queue */}
@@ -229,19 +236,21 @@ function DashboardContent() {
         {loading ? (
           <p className="text-sm text-stone-400 italic">Loading images…</p>
         ) : images.length === 0 ? (
-          <p className="text-sm text-stone-400 italic">No images pending review.</p>
+          <p className="text-sm text-stone-400 italic">
+            No images pending review.
+          </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {images.map((request) => (
+            {images.map((i) => (
               <article
-                key={request.id}
+                key={i.id}
                 className="bg-white border border-[#EBE6DD] rounded-2xl overflow-hidden shadow-sm flex flex-col"
               >
-                <div className="relative w-full h-64 bg-[#EDEAE4] flex items-center justify-center overflow-hidden">
-                  {request.imageSrc ? (
+                <div className="relative w-full h-54 bg-[#EDEAE4] flex items-center justify-center overflow-hidden">
+                  {i.originalUrl ? (
                     <Image
-                      src={request.imageSrc}
-                      alt={request.title}
+                      src={`${API_BASE}/uploads${i.originalUrl}`}
+                      alt={i.title}
                       fill
                       className="object-cover object-center grayscale contrast-110"
                     />
@@ -254,22 +263,22 @@ function DashboardContent() {
                     />
                   )}
                   <span className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm border border-stone-200/50 text-[9px] font-bold tracking-wider px-2.5 py-1 rounded-md text-stone-500 uppercase">
-                    {request.status}
+                    {i.status}
                   </span>
                 </div>
 
                 <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold tracking-widest text-[#B39254] uppercase font-sans">
-                      {request.category}
+                      {i.category}
                     </p>
                     <h4 className="text-lg font-serif text-stone-800 font-medium leading-snug">
-                      {request.title}
+                      {i.title}
                     </h4>
                     <p className="text-xs text-stone-400 font-medium">
                       Uploaded by{" "}
                       <span className="text-stone-600 font-semibold">
-                        {request.uploader}
+                        {i.uploader}
                       </span>
                     </p>
                   </div>
@@ -277,14 +286,14 @@ function DashboardContent() {
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <button
                       type="button"
-                      onClick={() => handleApproveImage(request.id)}
+                      onClick={() => handleApproveImage(i.id)}
                       className="w-full py-2.5 border border-[#E0D9CE] rounded-xl text-[10px] font-bold uppercase tracking-widest text-[#8A6D3B] hover:bg-stone-50 transition-colors"
                     >
                       Approve
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleRejectImage(request.id)}
+                      onClick={() => handleRejectImage(i.id)}
                       className="w-full py-2.5 border border-red-100 rounded-xl text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50/50 transition-colors"
                     >
                       Reject

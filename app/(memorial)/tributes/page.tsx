@@ -47,57 +47,61 @@ export default function TributesPage() {
   const [hasMore, setHasMore] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  
 
- const loadTributes = useCallback(async (cursor: number, isInitial: boolean) => {
-  try {
-    isInitial ? setLoading(true) : setLoadingMore(true);
+  const loadTributes = useCallback(
+    async (cursor: number, isInitial: boolean) => {
+      try {
+        isInitial ? setLoading(true) : setLoadingMore(true);
 
-    const { data } = await api.get(
-      `/api/tribute?limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ""}`
-    );
+        const { data } = await api.get(
+          `/api/tribute?limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ""}`,
+        );
 
-    if (data.success) {
-      const newTributes: Tribute[] = data.tributes || [];
-      setTributes((prev) => isInitial ? newTributes : [...prev, ...newTributes]);
-      setHasMore(newTributes.length === PAGE_SIZE);
-    }
-  } catch (error) {
-    console.error("Error fetching tributes:", error);
-  } finally {
-    isInitial ? setLoading(false) : setLoadingMore(false);
-  }
-}, []);
-
-
-
-useEffect(() => {
-  let cancelled = false;
-
-  (async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get(`/api/tribute?limit=${PAGE_SIZE}`);
-      if (!cancelled && data.success) {
-        const newTributes: Tribute[] = data.tributes || [];
-        setTributes(newTributes);
-        setHasMore(newTributes.length === PAGE_SIZE);
+        if (data.success) {
+          const newTributes: Tribute[] = data.tributes || [];
+          setTributes((prev) =>
+            isInitial ? newTributes : [...prev, ...newTributes],
+          );
+          setHasMore(newTributes.length === PAGE_SIZE);
+        }
+      } catch (error) {
+        console.error("Error fetching tributes:", error);
+      } finally {
+        isInitial ? setLoading(false) : setLoadingMore(false);
       }
-    } catch (error) {
-      if (!cancelled) console.error("Error fetching tributes:", error);
-    } finally {
-      if (!cancelled) setLoading(false);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setLoading(true);
+        const { data } = await api.get(`/api/tribute?limit=${PAGE_SIZE}`);
+        if (!cancelled && data.success) {
+          const newTributes: Tribute[] = data.tributes || [];
+          setTributes(newTributes);
+          setHasMore(newTributes.length === PAGE_SIZE);
+        }
+      } catch (error) {
+        if (!cancelled) console.error("Error fetching tributes:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleLoadMore = () => {
+    if (hasMore && !loadingMore) {
+      loadTributes(tributes.length, false);
     }
-  })();
-
-  return () => { cancelled = true; };
-}, []);
-
- const handleLoadMore = () => {
-  if (hasMore && !loadingMore) {
-    loadTributes(tributes.length, false);
-  }
-};
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -129,7 +133,7 @@ useEffect(() => {
       payload.append("message", formData.message);
       payload.append("relationship", formData.relationship);
       payload.append("email", formData.email);
-      payload.append("phoneNumber", formData.phoneNumber)
+      payload.append("phoneNumber", formData.phoneNumber);
 
       // The API accepts a single attachment; the editor allows attaching
       // multiple files, so only the first is sent.
@@ -253,26 +257,40 @@ useEffect(() => {
                   }}
                 />
 
-                {tribute.attachmentUrl && tribute.attachmentType === "image" && (
-                  <div className="relative w-full sm:w-64 h-44 sm:h-36 rounded-xl overflow-hidden shadow-sm my-2 p-1 bg-white ring-1 ring-[#E6DED2]">
-                    <div className="relative w-full h-full rounded-lg overflow-hidden">
-                      <Image
-                        src={`${process.env.NEXT_PUBLIC_API_URL ?? ""}/uploads${tribute.attachmentUrl}`}
-                        alt={tribute.title || "Tribute Image"}
-                        fill
-                        sizes="(max-width: 640px) 100vw, 256px"
-                        className="object-cover"
-                      />
+                {tribute.attachmentUrl &&
+                  tribute.attachmentType === "image" && (
+                    <div className="relative w-full sm:w-64 h-44 sm:h-36 rounded-xl overflow-hidden shadow-sm my-2 p-1 bg-white ring-1 ring-[#E6DED2]">
+                      <div className="relative w-full h-full rounded-lg overflow-hidden">
+                        <Image
+                          src={`${process.env.NEXT_PUBLIC_API_URL ?? ""}/uploads${tribute.attachmentUrl}`}
+                          alt={tribute.title || "Tribute Image"}
+                          fill
+                          sizes="(max-width: 640px) 100vw, 256px"
+                          className="object-cover"
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {tribute.attachmentUrl && tribute.attachmentType === "video" && (
-                  <video controls className="w-full rounded-xl">
-                    <source
-                      src={`${process.env.NEXT_PUBLIC_API_URL ?? ""}${tribute.attachmentUrl}`}
+                {tribute.attachmentUrl && tribute.attachmentType === "pdf" && (
+                  <>
+                    {/* Desktop — inline PDF viewer */}
+                    <iframe
+                      src={`${process.env.NEXT_PUBLIC_API_URL ?? ""}/uploads${tribute.attachmentUrl}`}
+                      className="w-full rounded-xl hidden md:block"
+                      style={{ height: "500px", border: "none" }}
                     />
-                  </video>
+
+                    {/* Mobile — download link */}
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_API_URL ?? ""}/uploads${tribute.attachmentUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="md:hidden flex items-center gap-2 text-xs font-semibold text-white bg-[#7A1C1C] px-4 py-3 rounded-xl w-fit"
+                    >
+                      View PDF
+                    </a>
+                  </>
                 )}
 
                 <div className="pt-4 border-t border-stone-100 text-xs text-stone-400">
@@ -290,7 +308,7 @@ useEffect(() => {
                 disabled={loadingMore}
                 className="w-full sm:w-auto border border-[#E6DED2] text-stone-700 font-semibold text-xs px-8 py-3.5 rounded-full hover:bg-[#7A1C1C] hover:text-white hover:border-[#7A1C1C] transition-all uppercase tracking-widest bg-white shadow-sm text-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loadingMore ? "Loading..." : "View Earlier Tributes"}
+                {loadingMore ? "Loading..." : "View More Tributes"}
               </button>
             </div>
           )}
@@ -338,7 +356,7 @@ useEffect(() => {
 
               <div className="space-y-1.5">
                 <label className="text-stone-500 font-semibold uppercase tracking-wide text-[10px]">
-                 Phone Number
+                  Phone Number
                 </label>
                 <input
                   type="tel"
@@ -349,8 +367,8 @@ useEffect(() => {
                   disabled={submitting}
                   className="w-full p-3 rounded-xl bg-[#FCFBF8] border border-[#E6DED2] text-stone-800 font-medium placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] disabled:opacity-60"
                   required
-                />   
-                </div>           
+                />
+              </div>
 
               <div className="space-y-1.5">
                 <label className="text-stone-500 font-semibold uppercase tracking-wide text-[10px]">
@@ -386,8 +404,8 @@ useEffect(() => {
                 </div>
                 {attachedFiles.length > 1 && (
                   <p className="text-[10px] text-stone-400">
-                    Only the first attachment ({attachedFiles[0].name}) will
-                    be submitted with your tribute.
+                    Only the first attachment ({attachedFiles[0].name}) will be
+                    submitted with your tribute.
                   </p>
                 )}
               </div>
