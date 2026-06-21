@@ -77,7 +77,7 @@ export default function MediaGalleryView() {
       isInitial ? setLoading(true) : setLoadingMore(true);
 
       const { data } = await api.get(
-        `/api/images/all?limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ""}`,
+        `/api/images?limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ""}`,
       );
 
       if (data.success) {
@@ -110,7 +110,7 @@ export default function MediaGalleryView() {
       try {
         setLoading(true);
 
-        const { data } = await api.get(`/api/images/all?limit=${PAGE_SIZE}`);
+        const { data } = await api.get(`/api/images?limit=${PAGE_SIZE}`);
 
         if (!cancelled && data.success) {
           const newImages: GalleryImage[] = data.data || [];
