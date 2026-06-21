@@ -252,7 +252,7 @@ function DashboardContent() {
                       src={`${API_BASE}/uploads${i.originalUrl}`}
                       alt={i.title}
                       fill
-                      className="object-cover object-center grayscale contrast-110"
+                      className="object-cover object-center"
                     />
                   ) : (
                     <ImageIcon
